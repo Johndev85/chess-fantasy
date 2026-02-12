@@ -1,0 +1,178 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+@use '../animations' as *;
+
+// Tablero principal
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: $board-size-desktop;
+  height: $board-size-desktop;
+  border: 6px solid $accent-gold;
+  border-radius: 4px;
+  box-shadow: 
+    0 0 0 4px $bg-dark,
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 0 100px rgba(0, 0, 0, 0.2);
+  position: relative;
+  background: $square-dark;
+  
+  @include respond-to(tablet) {
+    width: $board-size-tablet;
+    height: $board-size-tablet;
+  }
+  
+  @include respond-to(mobile) {
+    width: calc(100vw - 20px);
+    height: calc(100vw - 20px);
+    max-width: 500px;
+    max-height: 500px;
+  }
+  
+  // Coordenadas
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    color: $text-secondary;
+    font-size: 12px;
+    pointer-events: none;
+  }
+}
+
+// Casilla individual
+.square {
+  position: relative;
+  @include flex-center;
+  cursor: pointer;
+  transition: all $transition-fast;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  
+  // Colores base
+  &.light {
+    background-color: var(--square-light, $square-light);
+  }
+  
+  &.dark {
+    background-color: var(--square-dark, $square-dark);
+  }
+  
+  // Estados
+  &.selected {
+    box-shadow: inset 0 0 0 4px $square-selected;
+    animation: pulse-select 1s infinite;
+  }
+  
+  &.valid-move {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      width: 30%;
+      height: 30%;
+      background: $square-valid-move;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    
+    &:hover::after {
+      background: lighten($square-valid-move, 20%);
+    }
+  }
+  
+  &.valid-capture {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 4px solid $accent-red;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+  }
+  
+  &.last-move {
+    box-shadow: inset 0 0 0 3px $square-highlight;
+  }
+  
+  &.check {
+    animation: check-pulse 0.8s infinite;
+  }
+  
+  // Coordenadas en bordes
+  .coord-file,
+  .coord-rank {
+    position: absolute;
+    font-size: 10px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+  }
+  
+  .coord-file {
+    bottom: 2px;
+    right: 4px;
+  }
+  
+  .coord-rank {
+    top: 2px;
+    left: 4px;
+  }
+  
+  // Efecto hover
+  &:hover:not(.selected) {
+    filter: brightness(1.1);
+  }
+}
+
+// Contenedor de coordenadas
+.board-coordinates {
+  display: flex;
+  
+  &.files {
+    justify-content: space-around;
+    padding: 5px 0;
+    margin-left: 30px;
+    
+    span {
+      width: calc(100% / 8);
+      text-align: center;
+      color: $text-secondary;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  }
+  
+  &.ranks {
+    flex-direction: column;
+    justify-content: space-around;
+    padding: 0 5px;
+    width: 30px;
+    
+    span {
+      height: calc(100% / 8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $text-secondary;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  }
+}
+
+// Contenedor completo del tablero
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-with-coords {
+  display: flex;
+}

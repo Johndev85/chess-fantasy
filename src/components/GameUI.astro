@@ -1,0 +1,583 @@
+---
+// GameUI.astro - Panel de control del juego mejorado
+---
+
+<div class="side-panel" id="game-ui">
+  <!-- Indicador de Turno -->
+  <div class="turn-indicator" id="turn-indicator">
+    <div class="turn-piece white active" id="turn-white"></div>
+    <span class="turn-text" id="turn-text">Turno: Blancas</span>
+    <div class="turn-piece black" id="turn-black"></div>
+  </div>
+
+  <!-- Estado de IA Pensando -->
+  <div class="ai-thinking-container" id="ai-thinking-container" style="display: none;">
+    <div class="ai-thinking">
+      <span class="thinking-icon">🤖</span>
+      <div class="thinking-content">
+        <span class="thinking-text">IA pensando...</span>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Últimos Movimientos -->
+  <div class="last-moves-section" id="last-moves-section">
+    <label class="label">✨ Últimos Movimientos</label>
+    <div class="last-moves" id="last-moves">
+      <div class="empty-moves">Esperando movimientos...</div>
+    </div>
+  </div>
+
+  <!-- Piezas Capturadas -->
+  <div class="captured-grid">
+    <div class="captured-section">
+      <label class="label">⚫ Capturadas Negras</label>
+      <div class="captured-pieces" id="captured-black"></div>
+    </div>
+    
+    <div class="captured-section">
+      <label class="label">⚪ Capturadas Blancas</label>
+      <div class="captured-pieces" id="captured-white"></div>
+    </div>
+  </div>
+
+  <!-- Historial Completo -->
+  <div class="move-history-container">
+    <label class="label">📜 Historial Completo</label>
+    <div class="move-history" id="move-history">
+      <!-- Movimientos se agregan dinámicamente -->
+    </div>
+  </div>
+
+  <!-- Controles -->
+  <div class="controls">
+    <button class="btn btn-secondary" id="undo-btn">
+      <span class="btn-icon">↩️</span>
+      <span>Deshacer</span>
+    </button>
+    <button class="btn btn-danger" id="resign-btn">
+      <span class="btn-icon">🏳️</span>
+      <span>Rendirse</span>
+    </button>
+    <button class="btn" id="menu-btn">
+      <span class="btn-icon">📋</span>
+      <span>Menú</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  // Referencias
+  const turnText = document.getElementById('turn-text');
+  const turnWhite = document.getElementById('turn-white');
+  const turnBlack = document.getElementById('turn-black');
+  const aiThinkingContainer = document.getElementById('ai-thinking-container');
+  const lastMoves = document.getElementById('last-moves');
+  const moveHistory = document.getElementById('move-history');
+
+  // Actualizar indicador de turno
+  window.addEventListener('turnChange', (e) => {
+    const { color } = e.detail;
+    if (color === 'white') {
+      turnWhite.classList.add('active');
+      turnBlack.classList.remove('active');
+      turnText.textContent = 'Turno: Blancas';
+    } else {
+      turnWhite.classList.remove('active');
+      turnBlack.classList.add('active');
+      turnText.textContent = 'Turno: Negras';
+    }
+  });
+
+  // Mostrar/ocultar pensamiento de IA
+  window.addEventListener('aiThinking', (e) => {
+    aiThinkingContainer.style.display = e.detail.thinking ? 'block' : 'none';
+  });
+
+  // Agregar movimiento al historial y últimos movimientos
+  window.addEventListener('moveMade', (e) => {
+    const { moveNumber, whiteMove, blackMove, notation } = e.detail;
+    
+    // Actualizar últimos movimientos (máximo 5)
+    updateLastMoves(notation, whiteMove ? 'white' : 'black');
+    
+    if (whiteMove) {
+      // Nueva fila para movimiento de blancas
+      const row = document.createElement('div');
+      row.className = 'move-row';
+      row.innerHTML = `
+        <span class="move-number">${moveNumber}.</span>
+        <span class="move-white">${whiteMove}</span>
+        <span class="move-black"></span>
+      `;
+      moveHistory.appendChild(row);
+      moveHistory.scrollTop = moveHistory.scrollHeight;
+    } else if (blackMove) {
+      // Actualizar movimiento de negras en la última fila
+      const lastRow = moveHistory.lastElementChild;
+      if (lastRow) {
+        lastRow.querySelector('.move-black').textContent = blackMove;
+      }
+    }
+  });
+
+  // Actualizar panel de últimos movimientos
+  function updateLastMoves(notation, color) {
+    const moveEl = document.createElement('div');
+    moveEl.className = `last-move ${color}`;
+    moveEl.innerHTML = `
+      <span class="move-dot ${color}"></span>
+      <span class="move-notation">${notation}</span>
+    `;
+    
+    // Insertar al principio
+    if (lastMoves.querySelector('.empty-moves')) {
+      lastMoves.innerHTML = '';
+    }
+    
+    lastMoves.insertBefore(moveEl, lastMoves.firstChild);
+    
+    // Mantener solo los últimos 5
+    while (lastMoves.children.length > 5) {
+      lastMoves.removeChild(lastMoves.lastChild);
+    }
+  }
+
+  // Agregar pieza capturada
+  window.addEventListener('pieceCaptured', (e) => {
+    const { piece, color, notation } = e.detail;
+    const container = document.getElementById(`captured-${color}`);
+    if (container) {
+      const pieceEl = document.createElement('div');
+      pieceEl.className = 'captured-piece';
+      pieceEl.innerHTML = piece;
+      pieceEl.title = notation || '';
+      container.appendChild(pieceEl);
+    }
+  });
+
+  // Limpiar historial al iniciar nuevo juego
+  window.addEventListener('gameReset', () => {
+    lastMoves.innerHTML = '<div class="empty-moves">Esperando movimientos...</div>';
+    moveHistory.innerHTML = '';
+    document.getElementById('captured-black').innerHTML = '';
+    document.getElementById('captured-white').innerHTML = '';
+  });
+
+  // Botones
+  document.getElementById('undo-btn')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('undoMove'));
+  });
+
+  document.getElementById('resign-btn')?.addEventListener('click', () => {
+    if (confirm('¿Estás seguro de que quieres rendirte?')) {
+      window.dispatchEvent(new CustomEvent('resign'));
+    }
+  });
+
+  document.getElementById('menu-btn')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('returnToMenu'));
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/variables' as *;
+  @use '../styles/mixins' as *;
+
+  // Panel lateral mejorado
+  .side-panel {
+    background: $bg-card;
+    border: 3px solid lighten($bg-card, 10%);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 280px;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    @include respond-to(tablet) {
+      min-width: auto;
+      width: 100%;
+      max-width: $board-size-tablet;
+    }
+
+    @include respond-to(mobile) {
+      padding: 15px;
+    }
+  }
+
+  // Indicador de turno mejorado
+  .turn-indicator {
+    @include flex-center;
+    gap: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, $bg-dark 0%, darken($bg-dark, 5%) 100%);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+
+    .turn-piece {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      border: 3px solid;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+
+      &.white {
+        background: linear-gradient(135deg, $piece-white 0%, darken($piece-white, 15%) 100%);
+        border-color: darken($piece-white, 20%);
+        box-shadow: 0 0 10px rgba(245, 245, 220, 0.3);
+      }
+
+      &.black {
+        background: linear-gradient(135deg, lighten($piece-black, 10%) 0%, $piece-black 100%);
+        border-color: lighten($piece-black, 20%);
+        box-shadow: 0 0 10px rgba(47, 47, 47, 0.3);
+      }
+
+      &.active {
+        animation: pulse-turn 1.5s infinite;
+        transform: scale(1.1);
+      }
+    }
+
+    .turn-text {
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.95rem;
+      color: $accent-gold;
+    }
+  }
+
+  @keyframes pulse-turn {
+    0%, 100% {
+      box-shadow: 0 0 5px currentColor;
+    }
+    50% {
+      box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+    }
+  }
+
+  // IA Pensando - Contenedor fijo
+  .ai-thinking-container {
+    background: linear-gradient(135deg, rgba($accent-purple, 0.2) 0%, rgba($accent-purple, 0.1) 100%);
+    border: 2px solid rgba($accent-purple, 0.5);
+    border-radius: 10px;
+    padding: 12px;
+    animation: slide-in 0.3s ease;
+  }
+
+  .ai-thinking {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .thinking-icon {
+      font-size: 2rem;
+      animation: robot-bounce 0.6s infinite alternate;
+    }
+
+    .thinking-content {
+      flex: 1;
+    }
+
+    .thinking-text {
+      color: $accent-purple;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 3px;
+      overflow: hidden;
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, $accent-purple, $accent-cyan, $accent-purple);
+        background-size: 200% 100%;
+        animation: progress-move 1s infinite linear, shimmer 2s infinite;
+        width: 30%;
+        border-radius: 3px;
+      }
+    }
+  }
+
+  @keyframes robot-bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-5px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Últimos Movimientos
+  .last-moves-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+
+    .label {
+      color: $accent-gold;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+    }
+  }
+
+  .last-moves {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .empty-moves {
+      text-align: center;
+      color: $text-secondary;
+      font-style: italic;
+      padding: 10px;
+      font-size: 0.85rem;
+    }
+
+    .last-move {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      animation: fade-in-move 0.3s ease;
+      border-left: 3px solid transparent;
+
+      &.white {
+        border-left-color: $piece-white;
+        background: linear-gradient(90deg, rgba(245, 245, 220, 0.1) 0%, transparent 100%);
+      }
+
+      &.black {
+        border-left-color: lighten($piece-black, 30%);
+        background: linear-gradient(90deg, rgba(100, 100, 100, 0.2) 0%, transparent 100%);
+      }
+
+      .move-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+
+        &.white {
+          background: $piece-white;
+          box-shadow: 0 0 5px $piece-white;
+        }
+
+        &.black {
+          background: lighten($piece-black, 30%);
+          box-shadow: 0 0 5px rgba(100, 100, 100, 0.5);
+        }
+      }
+
+      .move-notation {
+        color: $text-primary;
+        font-weight: bold;
+      }
+    }
+  }
+
+  @keyframes fade-in-move {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  // Capturas - Grid
+  .captured-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .captured-section {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    padding: 10px;
+
+    .label {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+      display: block;
+    }
+  }
+
+  .captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 35px;
+
+    .captured-piece {
+      width: 28px;
+      height: 28px;
+      opacity: 0.8;
+      @include pixel-art;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+    }
+  }
+
+  // Historial
+  .move-history-container {
+    flex: 1;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+
+    .label {
+      margin-bottom: 10px;
+    }
+  }
+
+  .move-history {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 200px;
+
+    .move-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .move-number {
+        color: $text-secondary;
+        width: 35px;
+        font-size: 0.8rem;
+      }
+
+      .move-white,
+      .move-black {
+        flex: 1;
+        text-align: center;
+        color: $text-primary;
+        font-weight: 500;
+
+        &:empty::after {
+          content: '...';
+          color: $text-secondary;
+        }
+      }
+
+      .move-white {
+        color: lighten($piece-white, 10%);
+      }
+
+      .move-black {
+        color: lighten($piece-black, 40%);
+      }
+    }
+  }
+
+  // Controles
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+
+    .btn {
+      @include pixel-button($accent-purple);
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+
+      &.btn-primary {
+        @include pixel-button($accent-gold, $bg-dark);
+      }
+
+      &.btn-danger {
+        @include pixel-button($accent-red);
+      }
+
+      &.btn-secondary {
+        @include pixel-button($bg-card);
+      }
+
+      .btn-icon {
+        font-size: 1.1rem;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+
+  // Scrollbar personalizada
+  .move-history::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .move-history::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .move-history::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.3);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(255, 215, 0, 0.5);
+    }
+  }
+</style>

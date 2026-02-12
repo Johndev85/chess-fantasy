@@ -1,0 +1,167 @@
+---
+// AudioControl.astro - Control de audio global
+---
+
+<div class="audio-controls" id="audio-controls" style="display: none;">
+  <button class="audio-btn" id="toggle-audio" title="Activar/Desactivar audio">
+    🔊
+  </button>
+</div>
+
+<script>
+  // Clase para manejar el audio
+  class AudioManager {
+    constructor() {
+      this.soundsEnabled = true;
+      this.musicEnabled = true;
+      this.sounds = {};
+      this.music = null;
+      this.initialized = false;
+      
+      // Crear contexto de audio
+      this.audioContext = null;
+    }
+    
+    init() {
+      if (this.initialized) return;
+      
+      // Usar Web Audio API para efectos sintetizados
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    }
+    
+    // Reproducir sonido sintetizado
+    playSound(type) {
+      if (!this.soundsEnabled || !this.initialized) return;
+      
+      // Asegurar que el contexto esté activo
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+      
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+      
+      // Configurar sonido según tipo
+      switch (type) {
+        case 'move':
+          oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(220, this.audioContext.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+          oscillator.start(this.audioContext.currentTime);
+          oscillator.stop(this.audioContext.currentTime + 0.1);
+          break;
+          
+        case 'capture':
+          oscillator.frequency.setValueAtTime(880, this.audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(110, this.audioContext.currentTime + 0.3);
+          gainNode.gain.setValueAtTime(0.4, this.audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+          oscillator.start(this.audioContext.currentTime);
+          oscillator.stop(this.audioContext.currentTime + 0.3);
+          break;
+          
+        case 'check':
+          oscillator.frequency.setValueAtTime(523.25, this.audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(659.25, this.audioContext.currentTime + 0.1);
+          oscillator.frequency.setValueAtTime(783.99, this.audioContext.currentTime + 0.2);
+          gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+          gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.4);
+          oscillator.start(this.audioContext.currentTime);
+          oscillator.stop(this.audioContext.currentTime + 0.4);
+          break;
+          
+        case 'victory':
+          this.playMelody([523.25, 659.25, 783.99, 1046.50], [0, 0.15, 0.3, 0.45], 0.5);
+          break;
+          
+        case 'defeat':
+          this.playMelody([440, 415.30, 392, 349.23], [0, 0.2, 0.4, 0.6], 0.5);
+          break;
+      }
+    }
+    
+    playMelody(frequencies, times, duration) {
+      frequencies.forEach((freq, i) => {
+        const osc = this.audioContext.createOscillator();
+        const gain = this.audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, this.audioContext.currentTime + times[i]);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + times[i] + duration);
+        
+        osc.start(this.audioContext.currentTime + times[i]);
+        osc.stop(this.audioContext.currentTime + times[i] + duration);
+      });
+    }
+    
+    toggleSounds() {
+      this.soundsEnabled = !this.soundsEnabled;
+      return this.soundsEnabled;
+    }
+    
+    toggleMusic() {
+      this.musicEnabled = !this.musicEnabled;
+      if (this.music) {
+        this.musicEnabled ? this.music.play() : this.music.pause();
+      }
+      return this.musicEnabled;
+    }
+  }
+  
+  // Instancia global
+  window.audioManager = new AudioManager();
+  
+  // Inicializar en interacción del usuario
+  document.addEventListener('click', () => {
+    if (!window.audioManager.initialized) {
+      window.audioManager.init();
+    }
+  }, { once: true });
+  
+  // Escuchar eventos del juego
+  window.addEventListener('pieceMove', () => window.audioManager.playSound('move'));
+  window.addEventListener('pieceCapture', () => window.audioManager.playSound('capture'));
+  window.addEventListener('check', () => window.audioManager.playSound('check'));
+  window.addEventListener('gameWin', (e) => {
+    window.audioManager.playSound(e.detail.color === 'white' ? 'victory' : 'defeat');
+  });
+  
+  // Toggle botón
+  const toggleBtn = document.getElementById('toggle-audio');
+  toggleBtn?.addEventListener('click', () => {
+    const enabled = window.audioManager.toggleSounds();
+    toggleBtn.textContent = enabled ? '🔊' : '🔇';
+  });
+</script>
+
+<style lang="scss">
+  .audio-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+  
+  .audio-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #ffd700;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+      background: rgba(255, 215, 0, 0.2);
+    }
+  }
+</style>

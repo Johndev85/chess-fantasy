@@ -1,0 +1,68 @@
+@use 'variables' as *;
+
+// Temas de tablero
+$themes: (
+  enchanted-forest: (
+    light: #7CB342,
+    dark: #558B2F,
+    accent: #FFEB3B,
+    name: 'Bosque Encantado'
+  ),
+  dark-fortress: (
+    light: #5D4037,
+    dark: #3E2723,
+    accent: #9C27B0,
+    name: 'Fortaleza Oscura'
+  ),
+  celestial-sky: (
+    light: #64B5F6,
+    dark: #1976D2,
+    accent: #FFD700,
+    name: 'Cielo Celestial'
+  ),
+  volcanic-lands: (
+    light: #FF7043,
+    dark: #D84315,
+    accent: #FF1744,
+    name: 'Tierras Volcánicas'
+  ),
+  ice-kingdom: (
+    light: #B0BEC5,
+    dark: #78909C,
+    accent: #00E5FF,
+    name: 'Reino de Hielo'
+  )
+);
+
+// Mixin para aplicar tema
+@mixin apply-theme($theme-name) {
+  $theme: map-get($themes, $theme-name);
+  
+  --square-light: #{map-get($theme, light)};
+  --square-dark: #{map-get($theme, dark)};
+  --theme-accent: #{map-get($theme, accent)};
+}
+
+// Generar clases de temas
+@each $theme-name, $theme-values in $themes {
+  .theme-#{$theme-name} {
+    @include apply-theme($theme-name);
+    
+    .square-light {
+      background-color: var(--square-light);
+    }
+    
+    .square-dark {
+      background-color: var(--square-dark);
+    }
+    
+    .theme-accent {
+      color: var(--theme-accent);
+    }
+  }
+}
+
+// Tema por defecto
+:root {
+  @include apply-theme(enchanted-forest);
+}

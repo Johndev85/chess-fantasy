@@ -1,0 +1,99 @@
+---
+// PromotionModal.astro - Modal para promoción de peón
+---
+
+<div class="modal-overlay" id="promotion-modal" style="display: none;">
+  <div class="modal">
+    <h2>♟️ Promoción</h2>
+    <p>¡Tu peón ha llegado al otro lado!</p>
+    <p>Elige la pieza:</p>
+    
+    <div class="promotion-options" id="promotion-options">
+      <button class="promotion-btn" data-piece="queen">
+        <span class="piece-icon">♛</span>
+        <span>Reina</span>
+      </button>
+      <button class="promotion-btn" data-piece="rook">
+        <span class="piece-icon">♜</span>
+        <span>Torre</span>
+      </button>
+      <button class="promotion-btn" data-piece="bishop">
+        <span class="piece-icon">♝</span>
+        <span>Alfil</span>
+      </button>
+      <button class="promotion-btn" data-piece="knight">
+        <span class="piece-icon">♞</span>
+        <span>Caballo</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('promotion-modal');
+  const options = document.querySelectorAll('.promotion-btn');
+  let resolvePromotion = null;
+  
+  // Mostrar modal y retornar promesa
+  window.showPromotionModal = () => {
+    modal.style.display = 'flex';
+    
+    return new Promise((resolve) => {
+      resolvePromotion = resolve;
+    });
+  };
+  
+  // Manejar selección
+  options.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const piece = btn.dataset.piece;
+      modal.style.display = 'none';
+      if (resolvePromotion) {
+        resolvePromotion(piece);
+        resolvePromotion = null;
+      }
+    });
+  });
+  
+  // Cerrar al hacer click fuera
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      // Por defecto seleccionar reina
+      modal.style.display = 'none';
+      if (resolvePromotion) {
+        resolvePromotion('queen');
+        resolvePromotion = null;
+      }
+    }
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/variables' as *;
+  @use '../styles/mixins' as *;
+  @use '../styles/animations' as *;
+  
+  .promotion-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .promotion-btn {
+    @include pixel-button($accent-purple);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    
+    .piece-icon {
+      font-size: 3rem;
+    }
+    
+    &:hover {
+      transform: translateY(-3px);
+    }
+  }
+</style>

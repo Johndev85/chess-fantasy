@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<meta name="description" content="Chess Fantasy - Juego de ajedrez pixel-art con temática de fantasía" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<title>Chess Fantasy - Pixel Art Chess</title>
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>
+
+<style lang="scss">
+	@use '../styles/main' as *;
+	
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+
+	body {
+		font-family: 'Courier New', monospace;
+		background: $bg-dark;
+		color: $text-primary;
+		min-height: 100vh;
+		overflow-x: hidden;
+		
+		// Evitar zoom en mobile
+		touch-action: manipulation;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	html {
+		font-size: 16px;
+		
+		@media (max-width: 768px) {
+			font-size: 14px;
+		}
+	}
+</style>

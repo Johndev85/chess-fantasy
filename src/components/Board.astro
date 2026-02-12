@@ -1,0 +1,43 @@
+---
+// Board.astro - Componente del tablero de ajedrez
+const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+---
+
+<div class="board-wrapper">
+  <div class="board-with-coords">
+    <div class="board-coordinates ranks">
+      {ranks.map(rank => <span>{rank}</span>)}
+    </div>
+    
+    <div class="chess-board" id="chess-board">
+      {ranks.map((rank, rankIndex) => 
+        files.map((file, fileIndex) => {
+          const isLight = (rankIndex + fileIndex) % 2 === 0;
+          const squareId = `${file}${rank}`;
+          return (
+            <div 
+              class={`square ${isLight ? 'light' : 'dark'}`} 
+              data-square={squareId}
+              data-file={file}
+              data-rank={rank}
+              data-row={rankIndex}
+              data-col={fileIndex}
+            >
+              {fileIndex === 0 && <span class="coord-rank">{rank}</span>}
+              {rankIndex === 7 && <span class="coord-file">{file}</span>}
+            </div>
+          );
+        })
+      )}
+    </div>
+  </div>
+  
+  <div class="board-coordinates files">
+    {files.map(file => <span>{file}</span>)}
+  </div>
+</div>
+
+<style lang="scss">
+  @use '../styles/components/board' as *;
+</style>

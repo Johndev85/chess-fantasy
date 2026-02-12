@@ -1,0 +1,118 @@
+---
+// Menu.astro - Menú principal del juego
+const themes = [
+  { id: 'enchanted-forest', name: 'Bosque Encantado', light: '#7CB342', dark: '#558B2F' },
+  { id: 'dark-fortress', name: 'Fortaleza Oscura', light: '#5D4037', dark: '#3E2723' },
+  { id: 'celestial-sky', name: 'Cielo Celestial', light: '#64B5F6', dark: '#1976D2' },
+  { id: 'volcanic-lands', name: 'Tierras Volcánicas', light: '#FF7043', dark: '#D84315' },
+  { id: 'ice-kingdom', name: 'Reino de Hielo', light: '#B0BEC5', dark: '#78909C' }
+];
+---
+
+<div class="main-menu" id="main-menu">
+  <h1 class="menu-title">⚔️ CHESS FANTASY ⚔️</h1>
+  <p class="menu-subtitle">Pixel Art Edition</p>
+  
+  <div class="theme-selector" id="theme-selector">
+    {themes.map((theme, index) => (
+      <div 
+        class={`theme-option ${index === 0 ? 'active' : ''}`} 
+        data-theme={theme.id}
+        style={`--square-light: ${theme.light}; --square-dark: ${theme.dark};`}
+      >
+        <span class="theme-name">{theme.name}</span>
+      </div>
+    ))}
+  </div>
+  
+  <div class="menu-options">
+    <button class="menu-btn primary" data-mode="pvc">
+      🎮 1 Jugador vs IA
+    </button>
+    <button class="menu-btn" data-mode="pvp">
+      👥 2 Jugadores
+    </button>
+    <button class="menu-btn" id="settings-btn">
+      ⚙️ Configuración
+    </button>
+  </div>
+  
+  <div class="settings-panel" id="settings-panel" style="display: none;">
+    <h3>⚙️ Configuración</h3>
+    
+    <div class="setting-row">
+      <span class="setting-label">Efectos de Sonido</span>
+      <label class="toggle">
+        <input type="checkbox" id="sound-toggle" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    
+    <div class="setting-row">
+      <span class="setting-label">Música de Fondo</span>
+      <label class="toggle">
+        <input type="checkbox" id="music-toggle" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    
+    <div class="setting-row">
+      <span class="setting-label">Nivel de IA</span>
+      <select class="select" id="ai-level">
+        <option value="1">Fácil</option>
+        <option value="2" selected>Medio</option>
+        <option value="3">Difícil</option>
+      </select>
+    </div>
+    
+    <button class="btn btn-secondary" id="close-settings">Cerrar</button>
+  </div>
+</div>
+
+<script>
+  // Manejo del selector de temas
+  const themeOptions = document.querySelectorAll('.theme-option');
+  let selectedTheme = 'enchanted-forest';
+  
+  themeOptions.forEach(option => {
+    option.addEventListener('click', () => {
+      themeOptions.forEach(t => t.classList.remove('active'));
+      option.classList.add('active');
+      selectedTheme = option.dataset.theme;
+      
+      // Emitir evento para el juego
+      window.dispatchEvent(new CustomEvent('themeChange', { 
+        detail: { theme: selectedTheme } 
+      }));
+    });
+  });
+  
+  // Botones de modo de juego
+  document.querySelectorAll('[data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      const aiLevel = document.getElementById('ai-level')?.value || '2';
+      
+      window.dispatchEvent(new CustomEvent('startGame', { 
+        detail: { mode, theme: selectedTheme, aiLevel: parseInt(aiLevel) } 
+      }));
+    });
+  });
+  
+  // Panel de configuración
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsPanel = document.getElementById('settings-panel');
+  const closeSettings = document.getElementById('close-settings');
+  
+  settingsBtn?.addEventListener('click', () => {
+    settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+  });
+  
+  closeSettings?.addEventListener('click', () => {
+    settingsPanel.style.display = 'none';
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/components/ui' as *;
+</style>

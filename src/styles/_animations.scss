@@ -1,0 +1,361 @@
+@use 'variables' as *;
+
+// Animación de movimiento de pieza
+@keyframes move-piece {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// Animación de ataque/captura
+@keyframes attack {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px) rotate(-5deg);
+  }
+  40% {
+    transform: translateX(5px) rotate(5deg);
+  }
+  60% {
+    transform: translateX(-5px) rotate(-5deg);
+  }
+  80% {
+    transform: translateX(5px) rotate(5deg);
+  }
+}
+
+// Animación de selección
+@keyframes pulse-select {
+  0%, 100% {
+    box-shadow: 0 0 0 3px $square-selected;
+  }
+  50% {
+    box-shadow: 0 0 0 6px $square-selected;
+  }
+}
+
+// Animación de jaque
+@keyframes check-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px $square-check;
+    background-color: rgba(255, 0, 110, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px $square-check;
+    background-color: rgba(255, 0, 110, 0.6);
+  }
+}
+
+// Animación de promoción
+@keyframes promotion-sparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+// Animación de aparición
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Animación de desaparición
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+// Animación de victoria
+@keyframes victory-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-20px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-10px);
+  }
+}
+
+// Animación de hover en pieza
+@keyframes piece-hover {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+// ============ EFECTOS ESPECIALES POR TIPO DE PIEZA ============
+
+// PEÓN - Efecto de energía divina/demoníaca
+@keyframes pawn-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor);
+  }
+}
+
+// CABALLO - Efecto de movimiento etéreo/fantasmal
+@keyframes knight-float {
+  0%, 100% {
+    transform: translateY(0);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  50% {
+    transform: translateY(-5px);
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.2));
+  }
+}
+
+@keyframes knight-ghost {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+// ALFIL - Efecto de magia brillante/oscura
+@keyframes bishop-magic {
+  0% {
+    filter: drop-shadow(0 0 2px #00CED1) drop-shadow(0 0 4px #00CED1);
+  }
+  33% {
+    filter: drop-shadow(0 0 4px #9C27B0) drop-shadow(0 0 8px #9C27B0);
+  }
+  66% {
+    filter: drop-shadow(0 0 4px #FFD700) drop-shadow(0 0 8px #FFD700);
+  }
+  100% {
+    filter: drop-shadow(0 0 2px #00CED1) drop-shadow(0 0 4px #00CED1);
+  }
+}
+
+@keyframes bishop-dark-magic {
+  0% {
+    filter: drop-shadow(0 0 2px #9400D3) drop-shadow(0 0 4px #9400D3);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px #FF0000) drop-shadow(0 0 10px #FF0000);
+  }
+  100% {
+    filter: drop-shadow(0 0 2px #9400D3) drop-shadow(0 0 4px #9400D3);
+  }
+}
+
+// TORRE - Efecto de fortaleza imponente con partículas
+@keyframes rook-strength {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.5));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(255,215,0,0.4));
+    transform: scale(1.02);
+  }
+}
+
+@keyframes rook-lava {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px #FF4500);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #FF4500) drop-shadow(0 0 15px #FF0000);
+  }
+}
+
+// REINA - Efecto de resplandor real/oscuro
+@keyframes queen-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px #FFD700) drop-shadow(0 0 10px rgba(255,215,0,0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #FFD700) drop-shadow(0 0 20px rgba(255,215,0,0.8));
+  }
+}
+
+@keyframes queen-darkness {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px #8B0000) drop-shadow(0 0 10px rgba(139,0,0,0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #FF0000) drop-shadow(0 0 20px rgba(255,0,0,0.6));
+  }
+}
+
+// REY - Efecto de poder supremo divino/infernal
+@keyframes king-divine {
+  0% {
+    filter: drop-shadow(0 0 5px #FFD700) drop-shadow(0 0 10px #FFF);
+  }
+  25% {
+    filter: drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 15px #FFA500);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px #FFD700) drop-shadow(0 0 25px #FFF);
+  }
+  75% {
+    filter: drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 15px #FFA500);
+  }
+  100% {
+    filter: drop-shadow(0 0 5px #FFD700) drop-shadow(0 0 10px #FFF);
+  }
+}
+
+@keyframes king-infernal {
+  0% {
+    filter: drop-shadow(0 0 5px #FF4500) drop-shadow(0 0 10px #8B0000);
+  }
+  25% {
+    filter: drop-shadow(0 0 10px #FF0000) drop-shadow(0 0 20px #FF4500);
+  }
+  50% {
+    filter: drop-shadow(0 0 15px #FF4500) drop-shadow(0 0 30px #FF0000);
+  }
+  75% {
+    filter: drop-shadow(0 0 10px #FF0000) drop-shadow(0 0 20px #FF4500);
+  }
+  100% {
+    filter: drop-shadow(0 0 5px #FF4500) drop-shadow(0 0 10px #8B0000);
+  }
+}
+
+// Partículas flotantes
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) translateX(10px);
+    opacity: 0;
+  }
+}
+
+// ============ CLASES DE ANIMACIÓN ============
+
+.animate-move {
+  animation: move-piece 0.3s ease;
+}
+
+.animate-attack {
+  animation: attack 0.5s ease;
+}
+
+.animate-select {
+  animation: pulse-select 1s infinite;
+}
+
+.animate-check {
+  animation: check-pulse 0.8s infinite;
+}
+
+.animate-promotion {
+  animation: promotion-sparkle 1s ease-out forwards;
+}
+
+.animate-victory {
+  animation: victory-bounce 1s ease infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease forwards;
+}
+
+// Efectos específicos por pieza
+.piece-effect-pawn {
+  animation: pawn-pulse 2s infinite;
+}
+
+.piece-effect-knight {
+  animation: knight-float 3s ease-in-out infinite;
+}
+
+.piece-effect-bishop {
+  animation: bishop-magic 4s infinite;
+}
+
+.piece-effect-bishop.black {
+  animation: bishop-dark-magic 3s infinite;
+}
+
+.piece-effect-rook {
+  animation: rook-strength 3s infinite;
+}
+
+.piece-effect-rook.black {
+  animation: rook-lava 2s infinite;
+}
+
+.piece-effect-queen {
+  animation: queen-glow 3s infinite;
+}
+
+.piece-effect-queen.black {
+  animation: queen-darkness 2.5s infinite;
+}
+
+.piece-effect-king {
+  animation: king-divine 4s infinite;
+}
+
+.piece-effect-king.black {
+  animation: king-infernal 3s infinite;
+}
+
+// Transiciones comunes
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}

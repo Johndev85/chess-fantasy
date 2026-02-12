@@ -1,0 +1,867 @@
+---
+// index.astro - Página principal del juego
+import Layout from '../layouts/Layout.astro';
+import Menu from '../components/Menu.astro';
+import Board from '../components/Board.astro';
+import GameUI from '../components/GameUI.astro';
+import PromotionModal from '../components/PromotionModal.astro';
+import AudioControl from '../components/AudioControl.astro';
+---
+
+<Layout>
+  <main>
+    <!-- Menú Principal -->
+    <Menu />
+    
+    <!-- Contenedor del Juego -->
+    <div id="game-container" class="game-container" style="display: none;">
+      <h1 class="game-title">⚔️ CHESS FANTASY ⚔️</h1>
+      
+      <div class="game-layout">
+        <div class="board-section">
+          <Board />
+        </div>
+        <GameUI />
+      </div>
+    </div>
+    
+    <!-- Modal de Promoción -->
+    <PromotionModal />
+    
+    <!-- Control de Audio -->
+    <AudioControl />
+    
+    <!-- Modal de Fin de Juego -->
+    <div class="modal-overlay" id="game-over-modal" style="display: none;">
+      <div class="modal">
+        <h2 id="game-result-title">🎉 ¡Victoria!</h2>
+        <p id="game-result-message">Las blancas ganan por jaque mate</p>
+        <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+          <button class="btn btn-primary" id="play-again-btn">🔄 Jugar de Nuevo</button>
+          <button class="btn" id="main-menu-btn">📋 Menú Principal</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { ChessGame } from '../scripts/chess/Game.js';
+  import { Pawn } from '../scripts/chess/pieces/Pawn.js';
+  import { Knight } from '../scripts/chess/pieces/Knight.js';
+  import { Bishop } from '../scripts/chess/pieces/Bishop.js';
+  import { Rook } from '../scripts/chess/pieces/Rook.js';
+  import { Queen } from '../scripts/chess/pieces/Queen.js';
+  import { King } from '../scripts/chess/pieces/King.js';
+  
+  // Referencias DOM
+  const menu = document.getElementById('main-menu');
+  const gameContainer = document.getElementById('game-container');
+  const gameOverModal = document.getElementById('game-over-modal');
+  const boardEl = document.getElementById('chess-board');
+  
+  let game = null;
+  let currentTheme = 'enchanted-forest';
+  
+  // Iniciar juego
+  window.addEventListener('startGame', (e) => {
+    const { mode, theme, aiLevel } = e.detail;
+    currentTheme = theme;
+    
+    // Ocultar menú, mostrar juego
+    menu.style.display = 'none';
+    gameContainer.style.display = 'flex';
+    document.getElementById('audio-controls').style.display = 'block';
+    
+    // Aplicar tema
+    document.body.className = `theme-${theme}`;
+    
+    // Crear nuevo juego
+    game = new ChessGame({
+      mode,
+      aiLevel,
+      playerColor: 'white'
+    });
+    
+    // Renderizar tablero inicial
+    renderBoard();
+    
+    // Configurar eventos del tablero
+    setupBoardEvents();
+    
+    // Escuchar eventos del juego
+    setupGameListeners();
+  });
+  
+  // Cambiar tema
+  window.addEventListener('themeChange', (e) => {
+    currentTheme = e.detail.theme;
+    document.body.className = `theme-${currentTheme}`;
+  });
+  
+  // Renderizar tablero
+  function renderBoard() {
+    // Limpiar piezas existentes
+    document.querySelectorAll('.chess-piece').forEach(p => p.remove());
+    
+    // Agregar piezas actuales
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = game.getPieceAt(row, col);
+        if (piece) {
+          createPieceElement(piece, row, col);
+        }
+      }
+    }
+  }
+  
+  // Crear elemento de pieza
+  function createPieceElement(piece, row, col) {
+    const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    if (!square) return;
+    
+    const pieceEl = document.createElement('div');
+    pieceEl.className = `chess-piece ${piece.color}`;
+    pieceEl.dataset.type = piece.type;
+    pieceEl.dataset.color = piece.color;
+    pieceEl.dataset.row = row;
+    pieceEl.dataset.col = col;
+    
+    // SVG de la pieza
+    pieceEl.innerHTML = getPieceSVG(piece.type, piece.color);
+    
+    // Tooltip
+    const tooltip = document.createElement('span');
+    tooltip.className = 'piece-tooltip';
+    tooltip.textContent = getPieceName(piece.type);
+    pieceEl.appendChild(tooltip);
+    
+    square.appendChild(pieceEl);
+  }
+  
+  // Obtener SVG de pieza con detalles de fantasía
+  function getPieceSVG(type, color) {
+    const isWhite = color === 'white';
+    const baseColor = isWhite ? '#F5F5DC' : '#2F2F2F';
+    const accentColor = isWhite ? '#FFD700' : '#FF0000';
+    const glowColor = isWhite ? '#FFE55C' : '#FF4444';
+    const shadowColor = isWhite ? '#C4B896' : '#1A1A1A';
+    
+    const svgs = {
+      white: {
+        // PEÓN - Soldado Celestial
+        pawn: `<svg viewBox="0 0 32 32" class="piece-effect-pawn">
+          <defs>
+            <linearGradient id="pawnW" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFFEF0"/>
+              <stop offset="100%" style="stop-color:#E8E4C9"/>
+            </linearGradient>
+            <filter id="glowW">
+              <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Aura divina -->
+          <circle cx="16" cy="10" r="8" fill="#FFD700" opacity="0.2"/>
+          <!-- Casco -->
+          <ellipse cx="16" cy="7" rx="6" ry="5" fill="url(#pawnW)"/>
+          <ellipse cx="16" cy="5" rx="3" ry="2" fill="#FFD700"/>
+          <!-- Visor -->
+          <rect x="12" y="6" width="8" height="2" fill="#4169E1"/>
+          <!-- Cuello -->
+          <rect x="11" y="10" width="10" height="4" fill="url(#pawnW)"/>
+          <!-- Pechera -->
+          <rect x="10" y="14" width="12" height="8" fill="url(#pawnW)"/>
+          <!-- Símbolo solar -->
+          <circle cx="16" cy="17" r="3" fill="#FFD700" filter="url(#glowW)"/>
+          <!-- Base -->
+          <rect x="8" y="22" width="16" height="6" fill="url(#pawnW)"/>
+          <!-- Borde dorado -->
+          <rect x="8" y="23" width="16" height="1" fill="#FFD700" opacity="0.5"/>
+        </svg>`,
+        
+        // CABALLO - Pegaso
+        knight: `<svg viewBox="0 0 32 32" class="piece-effect-knight">
+          <defs>
+            <linearGradient id="knightW" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#F0F8FF"/>
+              <stop offset="50%" style="stop-color:#E6E6FA"/>
+              <stop offset="100%" style="stop-color:#D8D8E8"/>
+            </linearGradient>
+            <linearGradient id="wingW" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#E6E6FA"/>
+              <stop offset="100%" style="stop-color:#B8B8E0"/>
+            </linearGradient>
+          </defs>
+          <!-- Aura mágica -->
+          <ellipse cx="16" cy="24" rx="12" ry="4" fill="#E6E6FA" opacity="0.3"/>
+          <!-- Ala izquierda -->
+          <path d="M8 14 Q4 10 6 6 Q10 8 12 12" fill="url(#wingW)"/>
+          <!-- Ala derecha -->
+          <path d="M24 14 Q28 10 26 6 Q22 8 20 12" fill="url(#wingW)"/>
+          <!-- Cabeza -->
+          <ellipse cx="16" cy="10" rx="5" ry="6" fill="url(#knightW)"/>
+          <!-- Cuerno -->
+          <path d="M14 5 Q16 0 18 2" stroke="#FFD700" stroke-width="2" fill="none"/>
+          <!-- Ojo -->
+          <circle cx="14" cy="9" r="1.5" fill="#4169E1"/>
+          <!-- Cuello -->
+          <rect x="12" y="14" width="8" height="6" fill="url(#knightW)"/>
+          <!-- Crin -->
+          <path d="M16 14 Q14 18 16 20 Q18 18 16 14" fill="#E6E6FA"/>
+          <!-- Cuerpo -->
+          <ellipse cx="16" cy="22" rx="7" ry="5" fill="url(#knightW)"/>
+          <!-- Base -->
+          <rect x="9" y="26" width="14" height="4" fill="url(#knightW)"/>
+          <!-- Brillo mágico -->
+          <circle cx="18" cy="8" r="1" fill="white" opacity="0.8"/>
+        </svg>`,
+        
+        // ALFIL - Mago Celestial
+        bishop: `<svg viewBox="0 0 32 32" class="piece-effect-bishop">
+          <defs>
+            <linearGradient id="bishopW" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#F8F8FF"/>
+              <stop offset="100%" style="stop-color:#E0E0E8"/>
+            </linearGradient>
+            <linearGradient id="staffW" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFD700"/>
+              <stop offset="100%" style="stop-color:#B8860B"/>
+            </linearGradient>
+            <radialGradient id="orbW" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#00CED1"/>
+              <stop offset="100%" style="stop-color:#008B8B"/>
+            </radialGradient>
+          </defs>
+          <!-- Aura mágica -->
+          <circle cx="16" cy="8" r="10" fill="#00CED1" opacity="0.15"/>
+          <!-- Sombrero puntiagudo -->
+          <path d="M10 12 L16 1 L22 12" fill="url(#bishopW)"/>
+          <ellipse cx="16" cy="12" rx="8" ry="2" fill="#E8E8E8"/>
+          <!-- Báculo -->
+          <rect x="22" y="8" width="2" height="22" fill="url(#staffW)"/>
+          <!-- Orbe mágico -->
+          <circle cx="23" cy="6" r="3" fill="url(#orbW)"/>
+          <circle cx="23" cy="5" r="1" fill="white" opacity="0.8"/>
+          <!-- Túnica -->
+          <path d="M10 14 L22 14 L24 26 L8 26 Z" fill="url(#bishopW)"/>
+          <!-- Símbolo mágico -->
+          <text x="16" y="22" text-anchor="middle" fill="#9C27B0" font-size="8" font-weight="bold">✦</text>
+          <!-- Base -->
+          <rect x="7" y="26" width="18" height="4" fill="url(#bishopW)"/>
+          <!-- Partículas mágicas -->
+          <circle cx="12" cy="8" r="0.5" fill="#00CED1" opacity="0.6"/>
+          <circle cx="20" cy="5" r="0.5" fill="#00CED1" opacity="0.6"/>
+          <circle cx="18" cy="10" r="0.5" fill="#FFD700" opacity="0.6"/>
+        </svg>`,
+        
+        // TORRE - Fortaleza Celestial
+        rook: `<svg viewBox="0 0 32 32" class="piece-effect-rook">
+          <defs>
+            <linearGradient id="rookW" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#F5F5DC"/>
+              <stop offset="50%" style="stop-color:#E8E8D0"/>
+              <stop offset="100%" style="stop-color:#F5F5DC"/>
+            </linearGradient>
+            <linearGradient id="stoneW" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#D4D4C4"/>
+              <stop offset="100%" style="stop-color:#B8B8A8"/>
+            </linearGradient>
+          </defs>
+          <!-- Efecto de fortaleza -->
+          <rect x="5" y="26" width="22" height="4" fill="#FFD700" opacity="0.2"/>
+          <!-- Almenas -->
+          <rect x="5" y="3" width="5" height="6" fill="url(#stoneW)"/>
+          <rect x="13.5" y="3" width="5" height="6" fill="url(#stoneW)"/>
+          <rect x="22" y="3" width="5" height="6" fill="url(#stoneW)"/>
+          <!-- Cuerpo principal -->
+          <rect x="6" y="8" width="20" height="4" fill="url(#stoneW)"/>
+          <rect x="7" y="12" width="18" height="10" fill="url(#rookW)"/>
+          <!-- Ventanas/Símbolos -->
+          <rect x="10" y="15" width="3" height="4" fill="#4169E1"/>
+          <rect x="19" y="15" width="3" height="4" fill="#4169E1"/>
+          <!-- Escudo decorativo -->
+          <path d="M16 15 L18 18 L16 21 L14 18 Z" fill="#FFD700"/>
+          <!-- Base sólida -->
+          <rect x="6" y="22" width="20" height="6" fill="url(#stoneW)"/>
+          <!-- Detalles de piedra -->
+          <line x1="7" y1="24" x2="25" y2="24" stroke="#A0A090" stroke-width="0.5"/>
+          <!-- Puerta -->
+          <path d="M14 22 L14 28 L18 28 L18 22 Q16 20 14 22" fill="#8B7355"/>
+        </svg>`,
+        
+        // REINA - Reina Paladín
+        queen: `<svg viewBox="0 0 32 32" class="piece-effect-queen">
+          <defs>
+            <linearGradient id="queenW" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFF8DC"/>
+              <stop offset="100%" style="stop-color:#F0E68C"/>
+            </linearGradient>
+            <linearGradient id="crownW" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFD700"/>
+              <stop offset="100%" style="stop-color:#B8860B"/>
+            </linearGradient>
+            <radialGradient id="gemW" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#FF69B4"/>
+              <stop offset="100%" style="stop-color:#C71585"/>
+            </radialGradient>
+          </defs>
+          <!-- Aura regia -->
+          <ellipse cx="16" cy="6" rx="12" ry="4" fill="#FFD700" opacity="0.2"/>
+          <!-- Corona con puntas -->
+          <path d="M6 10 L8 2 L12 8 L16 0 L20 8 L24 2 L26 10 Z" fill="url(#crownW)"/>
+          <!-- Joyas en corona -->
+          <circle cx="16" cy="3" r="2" fill="url(#gemW)"/>
+          <circle cx="8" cy="6" r="1.5" fill="#4169E1"/>
+          <circle cx="24" cy="6" r="1.5" fill="#4169E1"/>
+          <!-- Cabeza -->
+          <ellipse cx="16" cy="13" rx="6" ry="5" fill="url(#queenW)"/>
+          <!-- Velo -->
+          <path d="M10 10 Q16 8 22 10 L22 18 Q16 16 10 18 Z" fill="white" opacity="0.3"/>
+          <!-- Cuello/Collar -->
+          <rect x="12" y="17" width="8" height="3" fill="url(#crownW)"/>
+          <circle cx="16" cy="18.5" r="1.5" fill="#FF0000"/>
+          <!-- Túnica real -->
+          <path d="M10 20 L22 20 L24 28 L8 28 Z" fill="url(#queenW)"/>
+          <!-- Manto -->
+          <path d="M8 20 Q6 24 8 28" stroke="#DC143C" stroke-width="2" fill="none"/>
+          <path d="M24 20 Q26 24 24 28" stroke="#DC143C" stroke-width="2" fill="none"/>
+          <!-- Base -->
+          <rect x="7" y="28" width="18" height="3" fill="url(#crownW)"/>
+          <!-- Destellos -->
+          <path d="M16 1 L16.5 0 L17 1" stroke="white" stroke-width="0.5" fill="none"/>
+          <path d="M16 1 L15.5 0 L15 1" stroke="white" stroke-width="0.5" fill="none"/>
+        </svg>`,
+        
+        // REY - Rey Celestial
+        king: `<svg viewBox="0 0 32 32" class="piece-effect-king">
+          <defs>
+            <linearGradient id="kingW" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFFAF0"/>
+              <stop offset="100%" style="stop-color:#F5E6D3"/>
+            </linearGradient>
+            <linearGradient id="crownK" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#FFD700"/>
+              <stop offset="50%" style="stop-color:#FFA500"/>
+              <stop offset="100%" style="stop-color:#B8860B"/>
+            </linearGradient>
+            <radialGradient id="scepterW" cx="30%" cy="30%" r="70%">
+              <stop offset="0%" style="stop-color:#FFF"/>
+              <stop offset="100%" style="stop-color:#FFD700"/>
+            </radialGradient>
+          </defs>
+          <!-- Resplandor divino -->
+          <circle cx="16" cy="8" r="12" fill="#FFD700" opacity="0.15"/>
+          <!-- Cruz real -->
+          <rect x="14" y="0" width="4" height="10" fill="url(#crownK)"/>
+          <rect x="10" y="3" width="12" height="4" fill="url(#crownK)"/>
+          <!-- Corona -->
+          <ellipse cx="16" cy="11" rx="9" ry="4" fill="url(#crownK)"/>
+          <circle cx="16" cy="9" r="2.5" fill="#FF0000"/>
+          <!-- Cabeza -->
+          <ellipse cx="16" cy="16" rx="6" ry="5" fill="url(#kingW)"/>
+          <!-- Barba -->
+          <path d="M12 18 Q16 22 20 18" fill="#DDD" opacity="0.5"/>
+          <!-- Cuello -->
+          <rect x="12" y="20" width="8" height="3" fill="url(#crownK)"/>
+          <!-- Túnica real -->
+          <path d="M10 23 L22 23 L24 30 L8 30 Z" fill="url(#kingW)"/>
+          <!-- Capa interior -->
+          <path d="M10 23 Q8 26 10 30" stroke="#DC143C" stroke-width="2" fill="none"/>
+          <path d="M22 23 Q24 26 22 30" stroke="#DC143C" stroke-width="2" fill="none"/>
+          <!-- Base -->
+          <rect x="7" y="30" width="18" height="2" fill="url(#crownK)"/>
+          <!-- Cetro (símbolo de poder) -->
+          <circle cx="20" cy="25" r="2" fill="url(#scepterW)"/>
+          <!-- Rayos de luz -->
+          <line x1="16" y1="-2" x2="16" y2="-4" stroke="#FFD700" stroke-width="1"/>
+          <line x1="10" y1="1" x2="8" y2="-1" stroke="#FFD700" stroke-width="0.5"/>
+          <line x1="22" y1="1" x2="24" y2="-1" stroke="#FFD700" stroke-width="0.5"/>
+        </svg>`
+      },
+      black: {
+        // PEÓN - Guerrero Orco
+        pawn: `<svg viewBox="0 0 32 32" class="piece-effect-pawn">
+          <defs>
+            <linearGradient id="pawnB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#4A4A4A"/>
+              <stop offset="100%" style="stop-color:#2A2A2A"/>
+            </linearGradient>
+            <linearGradient id="armorB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#5C4033"/>
+              <stop offset="100%" style="stop-color:#3D2817"/>
+            </linearGradient>
+          </defs>
+          <!-- Aura oscura -->
+          <circle cx="16" cy="10" r="8" fill="#FF0000" opacity="0.1"/>
+          <!-- Cuernos -->
+          <path d="M10 6 L8 2 L12 5" fill="#8B4513"/>
+          <path d="M22 6 L24 2 L20 5" fill="#8B4513"/>
+          <!-- Cabeza -->
+          <ellipse cx="16" cy="9" rx="7" ry="6" fill="#4A6741"/>
+          <!-- Ojos rojos brillantes -->
+          <ellipse cx="13" cy="8" rx="2" ry="1.5" fill="#FF0000"/>
+          <ellipse cx="19" cy="8" rx="2" ry="1.5" fill="#FF0000"/>
+          <circle cx="13.5" cy="8" r="0.5" fill="#FF6666"/>
+          <circle cx="19.5" cy="8" r="0.5" fill="#FF6666"/>
+          <!-- Colmillos -->
+          <path d="M14 11 L14 14" stroke="#FFF" stroke-width="1.5"/>
+          <path d="M18 11 L18 14" stroke="#FFF" stroke-width="1.5"/>
+          <!-- Cuello con armadura -->
+          <rect x="11" y="13" width="10" height="4" fill="url(#armorB)"/>
+          <circle cx="16" cy="15" r="2" fill="#FF0000" opacity="0.5"/>
+          <!-- Pecho -->
+          <rect x="10" y="17" width="12" height="8" fill="url(#armorB)"/>
+          <!-- Marcas de guerra -->
+          <path d="M13 19 L15 21 M17 20 L19 22" stroke="#8B0000" stroke-width="1"/>
+          <!-- Base -->
+          <rect x="8" y="25" width="16" height="5" fill="url(#pawnB)"/>
+          <!-- Puño con garra -->
+          <circle cx="10" cy="22" r="2" fill="#4A6741"/>
+          <path d="M9 23 L8 25 M10 23 L10 25.5 M11 23 L12 25" stroke="black" stroke-width="1"/>
+        </svg>`,
+        
+        // CABALLO - Lobo Sombrío
+        knight: `<svg viewBox="0 0 32 32" class="piece-effect-knight">
+          <defs>
+            <linearGradient id="knightB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#4A5568"/>
+              <stop offset="100%" style="stop-color:#2D3748"/>
+            </linearGradient>
+            <linearGradient id="eyeB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FF0000"/>
+              <stop offset="100%" style="stop-color:#8B0000"/>
+            </linearGradient>
+          </defs>
+          <!-- Aura fantasmal -->
+          <ellipse cx="16" cy="25" rx="12" ry="4" fill="#663399" opacity="0.2"/>
+          <!-- Orejas puntiagudas -->
+          <path d="M10 10 L8 2 L14 8" fill="#3D4852"/>
+          <path d="M22 10 L24 2 L18 8" fill="#3D4852"/>
+          <!-- Cabeza -->
+          <path d="M10 12 Q16 8 22 12 L20 20 Q16 18 12 20 Z" fill="url(#knightB)"/>
+          <!-- Ojos rojos brillantes -->
+          <ellipse cx="13" cy="13" rx="2" ry="1.5" fill="url(#eyeB)"/>
+          <ellipse cx="19" cy="13" rx="2" ry="1.5" fill="url(#eyeB)"/>
+          <!-- Brillo en ojos -->
+          <circle cx="13.5" cy="12.5" r="0.5" fill="#FF6666"/>
+          <circle cx="19.5" cy="12.5" r="0.5" fill="#FF6666"/>
+          <!-- Hocico -->
+          <ellipse cx="16" cy="18" rx="4" ry="3" fill="#2D3748"/>
+          <!-- Colmillos -->
+          <path d="M14 19 L13 22" stroke="#DDD" stroke-width="1.5"/>
+          <path d="M18 19 L19 22" stroke="#DDD" stroke-width="1.5"/>
+          <!-- Cuello -->
+          <rect x="12" y="20" width="8" height="5" fill="url(#knightB)"/>
+          <!-- Collar con pinchos -->
+          <rect x="11" y="20" width="10" height="2" fill="#4A5568"/>
+          <circle cx="12" cy="21" r="1" fill="#666"/>
+          <circle cx="16" cy="21" r="1" fill="#FF0000"/>
+          <circle cx="20" cy="21" r="1" fill="#666"/>
+          <!-- Cuerpo -->
+          <ellipse cx="16" cy="26" rx="7" ry="4" fill="url(#knightB)"/>
+          <!-- Base -->
+          <rect x="9" y="28" width="14" height="3" fill="#2D3748"/>
+          <!-- Garras -->
+          <path d="M11 29 L10 31 M13 29 L13 31 M15 29 L16 31" stroke="#666" stroke-width="1"/>
+          <path d="M17 29 L16 31 M19 29 L19 31 M21 29 L22 31" stroke="#666" stroke-width="1"/>
+        </svg>`,
+        
+        // ALFIL - Nigromante
+        bishop: `<svg viewBox="0 0 32 32" class="piece-effect-bishop">
+          <defs>
+            <linearGradient id="bishopB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#2D1B4E"/>
+              <stop offset="100%" style="stop-color:#1A0F2E"/>
+            </linearGradient>
+            <linearGradient id="staffB" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#8B008B"/>
+              <stop offset="100%" style="stop-color:#4B0082"/>
+            </linearGradient>
+            <radialGradient id="orbB" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#9400D3"/>
+              <stop offset="100%" style="stop-color:#4B0082"/>
+            </radialGradient>
+          </defs>
+          <!-- Aura oscura -->
+          <circle cx="16" cy="10" r="10" fill="#9400D3" opacity="0.15"/>
+          <!-- Sombrero alto de brujo -->
+          <path d="M11 12 L16 1 L21 12" fill="url(#bishopB)"/>
+          <ellipse cx="16" cy="12" rx="7" ry="2" fill="#3D1B6E"/>
+          <!-- Banda del sombrero -->
+          <rect x="12" y="9" width="8" height="2" fill="#8B008B"/>
+          <!-- Báculo con calavera -->
+          <rect x="22" y="6" width="2" height="24" fill="url(#staffB)"/>
+          <!-- Calavera en el báculo -->
+          <circle cx="23" cy="5" r="3" fill="#DDD"/>
+          <circle cx="22" cy="5" r="0.8" fill="#000"/>
+          <circle cx="24" cy="5" r="0.8" fill="#000"/>
+          <path d="M22 6.5 Q23 7 24 6.5" stroke="#000" stroke-width="0.5" fill="none"/>
+          <!-- Orbe de poder oscuro -->
+          <circle cx="23" cy="8" r="2" fill="url(#orbB)"/>
+          <circle cx="23" cy="7.5" r="0.5" fill="#E0B0FF" opacity="0.6"/>
+          <!-- Túnica -->
+          <path d="M10 14 L22 14 L25 26 L7 26 Z" fill="url(#bishopB)"/>
+          <!-- Símbolo de culto -->
+          <text x="16" y="22" text-anchor="middle" fill="#FF0000" font-size="8" font-weight="bold">☠</text>
+          <!-- Base -->
+          <rect x="6" y="26" width="20" height="4" fill="url(#bishopB)"/>
+          <!-- Partículas oscuras -->
+          <circle cx="11" cy="9" r="0.5" fill="#9400D3" opacity="0.5"/>
+          <circle cx="21" cy="6" r="0.5" fill="#9400D3" opacity="0.5"/>
+          <circle cx="19" cy="11" r="0.5" fill="#FF0000" opacity="0.4"/>
+        </svg>`,
+        
+        // TORRE - Fortaleza de Obsidiana
+        rook: `<svg viewBox="0 0 32 32" class="piece-effect-rook">
+          <defs>
+            <linearGradient id="rookB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#36454F"/>
+              <stop offset="50%" style="stop-color:#2C3E50"/>
+              <stop offset="100%" style="stop-color:#1C2833"/>
+            </linearGradient>
+            <linearGradient id="lavaB" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#FF4500"/>
+              <stop offset="100%" style="stop-color:#8B0000"/>
+            </linearGradient>
+          </defs>
+          <!-- Aura ígnea -->
+          <rect x="4" y="26" width="24" height="4" fill="#FF4500" opacity="0.15"/>
+          <!-- Almenas con fuego -->
+          <rect x="4" y="3" width="6" height="6" fill="url(#rookB)"/>
+          <rect x="5" y="4" width="4" height="2" fill="url(#lavaB)"/>
+          <rect x="13" y="3" width="6" height="6" fill="url(#rookB)"/>
+          <rect x="14" y="4" width="4" height="2" fill="url(#lavaB)"/>
+          <rect x="22" y="3" width="6" height="6" fill="url(#rookB)"/>
+          <rect x="23" y="4" width="4" height="2" fill="url(#lavaB)"/>
+          <!-- Cuerpo -->
+          <rect x="5" y="8" width="22" height="4" fill="#2C3E50"/>
+          <rect x="6" y="12" width="20" height="10" fill="url(#rookB)"/>
+          <!-- Grietas con lava -->
+          <line x1="10" y1="14" x2="10" y2="20" stroke="url(#lavaB)" stroke-width="1"/>
+          <line x1="22" y1="14" x2="22" y2="20" stroke="url(#lavaB)" stroke-width="1"/>
+          <line x1="16" y1="16" x2="16" y2="21" stroke="url(#lavaB)" stroke-width="1"/>
+          <!-- Ojos de la torre -->
+          <rect x="11" y="15" width="3" height="2" fill="#FF4500"/>
+          <rect x="18" y="15" width="3" height="2" fill="#FF4500"/>
+          <!-- Base con magma -->
+          <rect x="5" y="22" width="22" height="6" fill="#1C2833"/>
+          <rect x="6" y="23" width="20" height="2" fill="url(#lavaB)" opacity="0.6"/>
+          <!-- Puerta oscura -->
+          <path d="M13 22 L13 28 L19 28 L19 22 Q16 20 13 22" fill="#000"/>
+        </svg>`,
+        
+        // REINA - Reina Vampiresa
+        queen: `<svg viewBox="0 0 32 32" class="piece-effect-queen">
+          <defs>
+            <linearGradient id="queenB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#4A0E4E"/>
+              <stop offset="100%" style="stop-color:#2D0A31"/>
+            </linearGradient>
+            <linearGradient id="crownB" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#8B0000"/>
+              <stop offset="100%" style="stop-color:#4B0000"/>
+            </linearGradient>
+            <radialGradient id="gemB" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#FF0000"/>
+              <stop offset="100%" style="stop-color:#8B0000"/>
+            </radialGradient>
+          </defs>
+          <!-- Aura sanguínea -->
+          <ellipse cx="16" cy="6" rx="12" ry="4" fill="#FF0000" opacity="0.15"/>
+          <!-- Corona de espinas -->
+          <path d="M5 10 L7 2 L11 8 L16 0 L21 8 L25 2 L27 10" fill="none" stroke="url(#crownB)" stroke-width="2"/>
+          <path d="M5 10 L8 8 L11 10 L14 8 L16 10 L18 8 L21 10 L24 8 L27 10" fill="url(#crownB)"/>
+          <!-- Rubí central -->
+          <circle cx="16" cy="5" r="2.5" fill="url(#gemB)"/>
+          <ellipse cx="16.5" cy="4.5" rx="0.8" ry="0.5" fill="#FF6666" opacity="0.8"/>
+          <!-- Cabeza pálida -->
+          <ellipse cx="16" cy="13" rx="6" ry="5" fill="#F5DEB3"/>
+          <!-- Ojos rojos intensos -->
+          <ellipse cx="13" cy="12" rx="2" ry="1.5" fill="#8B0000"/>
+          <ellipse cx="19" cy="12" rx="2" ry="1.5" fill="#8B0000"/>
+          <circle cx="13.3" cy="11.8" r="0.5" fill="#FF0000"/>
+          <circle cx="19.3" cy="11.8" r="0.5" fill="#FF0000"/>
+          <!-- Colmillos -->
+          <path d="M14 15 L14 17" stroke="white" stroke-width="1"/>
+          <path d="M18 15 L18 17" stroke="white" stroke-width="1"/>
+          <!-- Cabello oscuro flotante -->
+          <path d="M10 10 Q8 14 10 18 Q12 14 10 10" fill="#2D0A31"/>
+          <path d="M22 10 Q24 14 22 18 Q20 14 22 10" fill="#2D0A31"/>
+          <!-- Vestido elegante -->
+          <path d="M10 17 L22 17 L25 28 L7 28 Z" fill="url(#queenB)"/>
+          <!-- Collar de sangre -->
+          <path d="M12 17 Q16 20 20 17" stroke="#FF0000" stroke-width="1.5" fill="none"/>
+          <circle cx="16" cy="18.5" r="1.5" fill="#8B0000"/>
+          <!-- Capa -->
+          <path d="M7 17 Q5 22 7 28" stroke="#2D0A31" stroke-width="2" fill="none"/>
+          <path d="M25 17 Q27 22 25 28" stroke="#2D0A31" stroke-width="2" fill="none"/>
+          <!-- Base -->
+          <rect x="6" y="28" width="20" height="3" fill="url(#crownB)"/>
+        </svg>`,
+        
+        // REY - Rey Demonio
+        king: `<svg viewBox="0 0 32 32" class="piece-effect-king">
+          <defs>
+            <linearGradient id="kingB" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#8B0000"/>
+              <stop offset="50%" style="stop-color:#4B0000"/>
+              <stop offset="100%" style="stop-color:#2B0000"/>
+            </linearGradient>
+            <linearGradient id="hornB" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#FFD700"/>
+              <stop offset="100%" style="stop-color:#B8860B"/>
+            </linearGradient>
+            <radialGradient id="eyeFire" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color:#FF4500"/>
+              <stop offset="100%" style="stop-color:#8B0000"/>
+            </radialGradient>
+          </defs>
+          <!-- Aura infernal -->
+          <circle cx="16" cy="10" r="12" fill="#FF4500" opacity="0.1"/>
+          <!-- Cuernos grandes -->
+          <path d="M8 10 L2 2 L12 8" fill="url(#hornB)"/>
+          <path d="M24 10 L30 2 L20 8" fill="url(#hornB)"/>
+          <!-- Corona de huesos -->
+          <ellipse cx="16" cy="12" rx="10" ry="4" fill="#4A4A4A"/>
+          <circle cx="16" cy="10" r="3" fill="#FF0000"/>
+          <!-- Cabeza demoníaca -->
+          <ellipse cx="16" cy="17" rx="7" ry="6" fill="#8B0000"/>
+          <!-- Ojos de fuego -->
+          <ellipse cx="13" cy="15" rx="2.5" ry="2" fill="url(#eyeFire)"/>
+          <ellipse cx="19" cy="15" rx="2.5" ry="2" fill="url(#eyeFire)"/>
+          <!-- Pupilas -->
+          <ellipse cx="13" cy="15" rx="1" ry="1.5" fill="#000"/>
+          <ellipse cx="19" cy="15" rx="1" ry="1.5" fill="#000"/>
+          <!-- Brillo en ojos -->
+          <circle cx="13.5" cy="14.5" r="0.5" fill="#FFAA00"/>
+          <circle cx="19.5" cy="14.5" r="0.5" fill="#FFAA00"/>
+          <!-- Colmillos grandes -->
+          <path d="M13 19 L12 23" stroke="#FFF" stroke-width="2"/>
+          <path d="M19 19 L20 23" stroke="#FFF" stroke-width="2"/>
+          <!-- Cuello con armadura -->
+          <rect x="11" y="22" width="10" height="3" fill="#4A4A4A"/>
+          <circle cx="16" cy="23.5" r="1.5" fill="#FF0000"/>
+          <!-- Pecho musculoso -->
+          <path d="M9 25 L23 25 L25 31 L7 31 Z" fill="url(#kingB)"/>
+          <!-- Marcas de poder -->
+          <path d="M12 27 L14 29 M18 27 L20 29" stroke="#FF4500" stroke-width="1"/>
+          <!-- Base -->
+          <rect x="6" y="31" width="20" height="1" fill="#4B0000"/>
+          <!-- Llamas infernales -->
+          <path d="M8 30 Q10 28 12 30" fill="#FF4500" opacity="0.6"/>
+          <path d="M20 30 Q22 28 24 30" fill="#FF4500" opacity="0.6"/>
+        </svg>`
+      }
+    };
+    
+    return svgs[color][type] || '';
+  }
+  
+  function getPieceName(type) {
+    const names = {
+      pawn: 'Peón', knight: 'Caballo', bishop: 'Alfil',
+      rook: 'Torre', queen: 'Reina', king: 'Rey'
+    };
+    return names[type] || type;
+  }
+  
+  // Configurar eventos del tablero
+  function setupBoardEvents() {
+    const squares = document.querySelectorAll('.square');
+    
+    squares.forEach(square => {
+      square.addEventListener('click', (e) => {
+        if (!game || game.isAIThinking) return;
+        
+        const row = parseInt(square.dataset.row);
+        const col = parseInt(square.dataset.col);
+        
+        const piece = game.getPieceAt(row, col);
+        
+        if (game.selectedPiece) {
+          // Intentar mover
+          if (game.isValidMove(row, col)) {
+            game.makeMove(game.selectedPiece.position, { row, col });
+          } else if (piece && piece.color === game.currentTurn) {
+            // Seleccionar otra pieza
+            selectSquare(row, col);
+          } else {
+            // Deseleccionar
+            clearSelection();
+          }
+        } else if (piece && piece.color === game.currentTurn) {
+          // Seleccionar pieza
+          selectSquare(row, col);
+        }
+      });
+    });
+  }
+  
+  // Seleccionar casilla
+  function selectSquare(row, col) {
+    clearSelection();
+    
+    if (game.selectPiece(row, col)) {
+      const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+      square.classList.add('selected');
+      
+      // Mostrar movimientos válidos
+      game.validMoves.forEach(move => {
+        const moveSquare = document.querySelector(`[data-row="${move.row}"][data-col="${move.col}"]`);
+        if (moveSquare) {
+          const piece = game.getPieceAt(move.row, move.col);
+          if (piece) {
+            moveSquare.classList.add('valid-capture');
+          } else {
+            moveSquare.classList.add('valid-move');
+          }
+        }
+      });
+    }
+  }
+  
+  // Limpiar selección
+  function clearSelection() {
+    document.querySelectorAll('.square').forEach(sq => {
+      sq.classList.remove('selected', 'valid-move', 'valid-capture', 'check');
+    });
+    game.deselectPiece();
+  }
+  
+  // Configurar listeners del juego
+  function setupGameListeners() {
+    // Movimiento de pieza
+    game.on('pieceMove', ({ from, to }) => {
+      // Actualizar DOM
+      const fromSquare = document.querySelector(`[data-row="${from.row}"][data-col="${from.col}"]`);
+      const toSquare = document.querySelector(`[data-row="${to.row}"][data-col="${to.col}"]`);
+      const pieceEl = fromSquare.querySelector('.chess-piece');
+      
+      if (pieceEl && toSquare) {
+        // Remover pieza del destino (captura)
+        const capturedPiece = toSquare.querySelector('.chess-piece');
+        if (capturedPiece) {
+          capturedPiece.remove();
+        }
+        
+        // Mover pieza
+        toSquare.appendChild(pieceEl);
+        pieceEl.dataset.row = to.row;
+        pieceEl.dataset.col = to.col;
+        pieceEl.classList.add('animate-move');
+        setTimeout(() => pieceEl.classList.remove('animate-move'), 300);
+      }
+      
+      // Limpiar selección
+      clearSelection();
+      
+      // Actualizar último movimiento
+      document.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
+      fromSquare.classList.add('last-move');
+      toSquare.classList.add('last-move');
+    });
+    
+    // Promoción
+    game.on('pieceMove', ({ piece }) => {
+      if (piece.type === 'pawn') {
+        const row = piece.color === 'white' ? 0 : 7;
+        const square = document.querySelector(`.chess-piece[data-row="${row}"]`);
+        if (square) {
+          const pieceEl = square.closest('.chess-piece');
+          const type = pieceEl?.dataset.type;
+          const color = pieceEl?.dataset.color;
+          if (type && color && type !== 'pawn') {
+            pieceEl.innerHTML = getPieceSVG(type, color);
+            pieceEl.innerHTML += '<span class="piece-tooltip">' + getPieceName(type) + '</span>';
+          }
+        }
+      }
+    });
+    
+    // Jaque
+    game.on('check', ({ color }) => {
+      const kingPos = game.board.getKingPosition(color);
+      const kingSquare = document.querySelector(`[data-row="${kingPos.row}"][data-col="${kingPos.col}"]`);
+      if (kingSquare) {
+        kingSquare.classList.add('check');
+      }
+    });
+    
+    // Fin de juego
+    game.on('gameWin', ({ winner, resigned }) => {
+      const title = document.getElementById('game-result-title');
+      const message = document.getElementById('game-result-message');
+      
+      if (resigned) {
+        title.textContent = '🏳️ Rendición';
+        message.textContent = `Las ${winner === 'white' ? 'blancas' : 'negras'} ganan por rendición`;
+      } else {
+        title.textContent = winner === 'white' ? '🎉 ¡Victoria!' : '💀 Derrota';
+        message.textContent = `Las ${winner === 'white' ? 'blancas' : 'negras'} ganan por jaque mate`;
+      }
+      
+      gameOverModal.style.display = 'flex';
+    });
+    
+    game.on('gameDraw', ({ reason }) => {
+      const title = document.getElementById('game-result-title');
+      const message = document.getElementById('game-result-message');
+      
+      title.textContent = '🤝 Tablas';
+      
+      const reasons = {
+        'stalemate': 'Por ahogado',
+        'fifty-move rule': 'Regla de los 50 movimientos',
+        'insufficient material': 'Material insuficiente'
+      };
+      
+      message.textContent = reasons[reason] || 'Empate';
+      gameOverModal.style.display = 'flex';
+    });
+    
+    // Undo
+    window.addEventListener('undoMove', () => {
+      game.undo();
+      renderBoard();
+      clearSelection();
+      
+      // Restaurar último movimiento visual
+      document.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
+    });
+    
+    // Rendición
+    window.addEventListener('resign', () => {
+      game.resign();
+    });
+    
+    // Volver al menú
+    window.addEventListener('returnToMenu', () => {
+      gameContainer.style.display = 'none';
+      menu.style.display = 'flex';
+      gameOverModal.style.display = 'none';
+      game = null;
+    });
+  }
+  
+  // Botones de fin de juego
+  document.getElementById('play-again-btn')?.addEventListener('click', () => {
+    gameOverModal.style.display = 'none';
+    if (game) {
+      game.reset();
+      renderBoard();
+      clearSelection();
+    }
+  });
+  
+  document.getElementById('main-menu-btn')?.addEventListener('click', () => {
+    gameContainer.style.display = 'none';
+    menu.style.display = 'flex';
+    gameOverModal.style.display = 'none';
+    game = null;
+  });
+</script>
+
+<style lang="scss">
+  @use '../styles/main' as *;
+</style>

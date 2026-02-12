@@ -1,0 +1,78 @@
+@use 'variables' as *;
+
+// Mixin para responsive
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == mobile {
+    @media (max-width: #{$mobile}) { @content; }
+  }
+  @if $breakpoint == tablet {
+    @media (max-width: #{$tablet}) { @content; }
+  }
+  @if $breakpoint == desktop {
+    @media (min-width: #{$desktop}) { @content; }
+  }
+}
+
+// Mixin para botones pixel-art
+@mixin pixel-button($bg-color, $text-color: $text-primary) {
+  background: $bg-color;
+  border: 3px solid darken($bg-color, 20%);
+  color: $text-color;
+  font-family: inherit;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  transition: all $transition-fast;
+  
+  // Efecto 3D pixel
+  box-shadow: 
+    4px 4px 0 darken($bg-color, 30%),
+    inset -2px -2px 0 rgba(0,0,0,0.2),
+    inset 2px 2px 0 rgba(255,255,255,0.2);
+  
+  &:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 
+      3px 3px 0 darken($bg-color, 30%),
+      inset -2px -2px 0 rgba(0,0,0,0.2),
+      inset 2px 2px 0 rgba(255,255,255,0.2);
+  }
+  
+  &:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+  }
+}
+
+// Mixin para texto con sombra pixel
+@mixin pixel-text($color) {
+  color: $color;
+  text-shadow: 
+    2px 2px 0 darken($color, 40%),
+    -1px -1px 0 lighten($color, 20%);
+}
+
+// Mixin para contenedor centrado
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// Mixin para el tablero
+@mixin board-container {
+  @include flex-center;
+  padding: 20px;
+  
+  @include respond-to(mobile) {
+    padding: 10px;
+  }
+}
+
+// Mixin para sprites pixel-art sin blur
+@mixin pixel-art {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}

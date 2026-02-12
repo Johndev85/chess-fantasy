@@ -1,0 +1,234 @@
+@use '../variables' as *;
+@use '../mixins' as *;
+@use '../animations' as *;
+
+// Menú principal
+.main-menu {
+  @include flex-center;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, $bg-dark 0%, darken($bg-dark, 5%) 50%, $bg-card 100%);
+  
+  .menu-title {
+    @include pixel-text($accent-gold);
+    font-size: 3.5rem;
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 6px;
+    animation: fade-in 1s ease;
+    
+    @include respond-to(mobile) {
+      font-size: 2.2rem;
+      letter-spacing: 3px;
+    }
+  }
+  
+  .menu-subtitle {
+    color: $accent-purple;
+    font-size: 1.2rem;
+    margin-bottom: 50px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    animation: fade-in 1s ease 0.2s backwards;
+    
+    @include respond-to(mobile) {
+      font-size: 1rem;
+      margin-bottom: 30px;
+    }
+  }
+}
+
+// Contenedor de opciones del menú
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
+  animation: fade-in 1s ease 0.4s backwards;
+  
+  .menu-btn {
+    @include pixel-button($accent-purple);
+    padding: 20px 40px;
+    font-size: 1.3rem;
+    width: 100%;
+    
+    &:hover {
+      transform: translateY(-2px);
+    }
+    
+    &.primary {
+      @include pixel-button($accent-gold, $bg-dark);
+      font-size: 1.5rem;
+    }
+  }
+}
+
+// Selector de tema
+.theme-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin: 30px 0;
+  
+  .theme-option {
+    width: 80px;
+    height: 80px;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: all $transition-fast;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, var(--square-light) 50%, var(--square-dark) 50%);
+    }
+    
+    &:hover {
+      transform: scale(1.1);
+      border-color: $text-secondary;
+    }
+    
+    &.active {
+      border-color: $accent-gold;
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    }
+    
+    .theme-name {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.8);
+      color: $text-primary;
+      font-size: 10px;
+      padding: 4px;
+      text-align: center;
+    }
+  }
+}
+
+// Panel de configuración
+.settings-panel {
+  background: $bg-card;
+  border: 2px solid lighten($bg-card, 10%);
+  border-radius: 12px;
+  padding: 25px;
+  margin-top: 30px;
+  width: 100%;
+  max-width: 400px;
+  animation: fade-in 0.5s ease;
+  
+  h3 {
+    @include pixel-text($accent-gold);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .setting-label {
+      color: $text-primary;
+      font-weight: bold;
+    }
+    
+    .setting-value {
+      color: $accent-cyan;
+    }
+  }
+}
+
+// Barra de progreso de la IA
+.ai-thinking {
+  @include flex-center;
+  gap: 15px;
+  padding: 15px;
+  background: rgba($accent-purple, 0.2);
+  border-radius: 8px;
+  margin-top: 15px;
+  
+  .thinking-text {
+    color: $accent-purple;
+    font-weight: bold;
+  }
+  
+  .progress-bar {
+    width: 150px;
+    height: 8px;
+    background: $bg-dark;
+    border-radius: 4px;
+    overflow: hidden;
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, $accent-purple, $accent-cyan);
+      border-radius: 4px;
+      animation: progress-move 1s infinite linear;
+      width: 30%;
+    }
+  }
+}
+
+@keyframes progress-move {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+// Historial de movimientos
+.move-history {
+  max-height: 200px;
+  overflow-y: auto;
+  background: $bg-dark;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+  
+  .move-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-family: monospace;
+    font-size: 14px;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .move-number {
+      color: $text-secondary;
+      width: 40px;
+    }
+    
+    .move-white,
+    .move-black {
+      flex: 1;
+      text-align: center;
+      color: $text-primary;
+      
+      &.highlight {
+        color: $accent-gold;
+        font-weight: bold;
+      }
+    }
+  }
+}

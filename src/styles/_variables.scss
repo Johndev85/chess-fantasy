@@ -1,0 +1,43 @@
+// Variables globales
+$bg-dark: #1a1a2e;
+$bg-card: #16213e;
+$accent-gold: #ffd700;
+$accent-purple: #9d4edd;
+$accent-cyan: #00d9ff;
+$accent-red: #ff006e;
+
+$text-primary: #eaeaea;
+$text-secondary: #a0a0a0;
+
+// Colores de piezas
+$piece-white: #f5f5dc;
+$piece-black: #2f2f2f;
+
+// Colores de casillas (tema default)
+$square-light: #7cb342;
+$square-dark: #558b2f;
+$square-highlight: rgba(255, 215, 0, 0.5);
+$square-selected: rgba(0, 217, 255, 0.6);
+$square-valid-move: rgba(157, 78, 221, 0.4);
+$square-check: rgba(255, 0, 110, 0.6);
+
+// Breakpoints
+$mobile: 480px;
+$tablet: 768px;
+$desktop: 1024px;
+
+// Tamaños de tablero
+$board-size-desktop: 600px;
+$board-size-tablet: 500px;
+$board-size-mobile: 100vw;
+
+// Z-index
+$z-board: 1;
+$z-piece: 10;
+$z-ui: 100;
+$z-modal: 1000;
+
+// Transiciones
+$transition-fast: 0.15s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
