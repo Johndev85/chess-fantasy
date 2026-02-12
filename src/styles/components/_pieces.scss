@@ -4,12 +4,15 @@
 
 // Pieza de ajedrez
 .chess-piece {
-  width: 90%;
-  height: 90%;
+  width: 100%;
+  height: 100%;
   @include pixel-art;
   transition: all $transition-fast;
   position: relative;
   z-index: $z-piece;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   // Dragging
   &.dragging {
