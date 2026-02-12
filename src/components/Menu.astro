@@ -87,14 +87,18 @@ const themes = [
     });
   });
   
+  // Obtener configuración de música
+  const musicToggle = document.getElementById('music-toggle');
+  
   // Botones de modo de juego
   document.querySelectorAll('[data-mode]').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
       const aiLevel = document.getElementById('ai-level')?.value || '2';
+      const musicEnabled = musicToggle?.checked ?? true;
       
       window.dispatchEvent(new CustomEvent('startGame', { 
-        detail: { mode, theme: selectedTheme, aiLevel: parseInt(aiLevel) } 
+        detail: { mode, theme: selectedTheme, aiLevel: parseInt(aiLevel), music: musicEnabled } 
       }));
     });
   });

@@ -62,9 +62,21 @@ import AudioControl from '../components/AudioControl.astro';
   
   let game = null;
   let currentTheme = 'enchanted-forest';
+  let musicEnabled = true; // Estado global de la música
   
   // Sistema de Música Medieval RPG
   class MedievalMusicPlayer {
+    constructor() {
+      this.audioContext = null;
+      this.masterGain = null;
+      this.musicGain = null;
+      this.sfxGain = null;
+      this.isPlaying = false;
+      this.currentNote = 0;
+      this.tempo = 120;
+      this.intervalId = null;
+      
+      // Melodía medieval RPG
     constructor() {
       this.audioContext = null;
       this.masterGain = null;
@@ -142,7 +154,7 @@ import AudioControl from '../components/AudioControl.astro';
     }
     
     play() {
-      if (this.isPlaying) return;
+      if (this.isPlaying || !musicEnabled) return; // No reproducir si está desactivada
       this.init();
       this.isPlaying = true;
       
@@ -187,8 +199,9 @@ import AudioControl from '../components/AudioControl.astro';
   
   // Iniciar juego
   window.addEventListener('startGame', (e) => {
-    const { mode, theme, aiLevel } = e.detail;
+    const { mode, theme, aiLevel, music } = e.detail;
     currentTheme = theme;
+    musicEnabled = music !== false; // Si no se especifica, por defecto true
     
     // Ocultar menú, mostrar juego
     menu.style.display = 'none';
@@ -205,9 +218,11 @@ import AudioControl from '../components/AudioControl.astro';
       playerColor: 'white'
     });
     
-    // Iniciar música medieval
-    musicPlayer.init();
-    musicPlayer.play();
+    // Iniciar música medieval solo si está habilitada
+    if (musicEnabled) {
+      musicPlayer.init();
+      musicPlayer.play();
+    }
     
     // Renderizar tablero inicial
     renderBoard();
@@ -270,23 +285,28 @@ import AudioControl from '../components/AudioControl.astro';
     // SVG de la pieza
     pieceEl.innerHTML = getPieceSVG(piece.type, piece.color);
     
-    // Tooltip con delay de 2 segundos
+    // Tooltip oculto por defecto, solo aparece después de 2s de hover
     const tooltip = document.createElement('span');
     tooltip.className = 'piece-tooltip';
     tooltip.textContent = getPieceName(piece.type);
+    tooltip.style.opacity = '0';
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.transition = 'opacity 0.3s ease';
     pieceEl.appendChild(tooltip);
     
-    // Hover delay para tooltip
+    // Hover delay para tooltip (2 segundos)
     let hoverTimeout;
     pieceEl.addEventListener('mouseenter', () => {
       hoverTimeout = setTimeout(() => {
-        tooltip.classList.add('show');
+        tooltip.style.opacity = '1';
+        tooltip.style.visibility = 'visible';
       }, 2000);
     });
     
     pieceEl.addEventListener('mouseleave', () => {
       clearTimeout(hoverTimeout);
-      tooltip.classList.remove('show');
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
     });
     
     square.appendChild(pieceEl);
@@ -971,6 +991,9 @@ import AudioControl from '../components/AudioControl.astro';
     
     // Fin de juego
     game.on('gameWin', ({ winner, resigned }) => {
+      // Detener música cuando termina el juego
+      musicPlayer.stop();
+      
       const title = document.getElementById('game-result-title');
       const message = document.getElementById('game-result-message');
       
@@ -986,6 +1009,9 @@ import AudioControl from '../components/AudioControl.astro';
     });
     
     game.on('gameDraw', ({ reason }) => {
+      // Detener música cuando termina el juego
+      musicPlayer.stop();
+      
       const title = document.getElementById('game-result-title');
       const message = document.getElementById('game-result-message');
       
