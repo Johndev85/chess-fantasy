@@ -77,17 +77,6 @@ import AudioControl from '../components/AudioControl.astro';
       this.intervalId = null;
       
       // Melodía medieval RPG
-    constructor() {
-      this.audioContext = null;
-      this.masterGain = null;
-      this.musicGain = null;
-      this.sfxGain = null;
-      this.isPlaying = false;
-      this.currentNote = 0;
-      this.tempo = 120;
-      this.intervalId = null;
-      
-      // Melodía medieval RPG
       this.melody = [
         { note: 261.63, duration: 0.5 }, // C4
         { note: 293.66, duration: 0.5 }, // D4
