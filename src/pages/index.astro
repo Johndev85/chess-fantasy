@@ -63,6 +63,128 @@ import AudioControl from '../components/AudioControl.astro';
   let game = null;
   let currentTheme = 'enchanted-forest';
   
+  // Sistema de Música Medieval RPG
+  class MedievalMusicPlayer {
+    constructor() {
+      this.audioContext = null;
+      this.masterGain = null;
+      this.musicGain = null;
+      this.sfxGain = null;
+      this.isPlaying = false;
+      this.currentNote = 0;
+      this.tempo = 120;
+      this.intervalId = null;
+      
+      // Melodía medieval RPG
+      this.melody = [
+        { note: 261.63, duration: 0.5 }, // C4
+        { note: 293.66, duration: 0.5 }, // D4
+        { note: 329.63, duration: 0.5 }, // E4
+        { note: 349.23, duration: 0.5 }, // F4
+        { note: 392.00, duration: 1.0 }, // G4
+        { note: 349.23, duration: 0.5 }, // F4
+        { note: 329.63, duration: 0.5 }, // E4
+        { note: 293.66, duration: 1.0 }, // D4
+        { note: 261.63, duration: 0.5 }, // C4
+        { note: 196.00, duration: 0.5 }, // G3
+        { note: 261.63, duration: 1.5 }, // C4
+        { note: 0, duration: 0.5 },      // Rest
+        { note: 329.63, duration: 0.5 }, // E4
+        { note: 392.00, duration: 0.5 }, // G4
+        { note: 523.25, duration: 1.0 }, // C5
+        { note: 493.88, duration: 0.5 }, // B4
+        { note: 440.00, duration: 0.5 }, // A4
+        { note: 392.00, duration: 1.0 }, // G4
+        { note: 349.23, duration: 0.5 }, // F4
+        { note: 329.63, duration: 0.5 }, // E4
+        { note: 293.66, duration: 0.5 }, // D4
+        { note: 261.63, duration: 1.5 }, // C4
+      ];
+    }
+    
+    init() {
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.connect(this.audioContext.destination);
+        
+        this.musicGain = this.audioContext.createGain();
+        this.musicGain.gain.value = 0.5;
+        this.musicGain.connect(this.masterGain);
+        
+        this.sfxGain = this.audioContext.createGain();
+        this.sfxGain.gain.value = 0.7;
+        this.sfxGain.connect(this.masterGain);
+      }
+    }
+    
+    playNote(frequency, duration, time) {
+      if (!this.audioContext || frequency === 0) return;
+      
+      const osc = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      
+      // Usar ondas triangulares para sonido medieval
+      osc.type = 'triangle';
+      osc.frequency.value = frequency;
+      
+      // Envelope ADSR
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.3, time + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.2, time + duration * 0.5);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + duration * 0.9);
+      
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+      
+      osc.start(time);
+      osc.stop(time + duration);
+    }
+    
+    play() {
+      if (this.isPlaying) return;
+      this.init();
+      this.isPlaying = true;
+      
+      const scheduleNext = () => {
+        if (!this.isPlaying) return;
+        
+        const currentTime = this.audioContext.currentTime;
+        const noteData = this.melody[this.currentNote];
+        
+        this.playNote(noteData.note, noteData.duration, currentTime);
+        
+        this.currentNote = (this.currentNote + 1) % this.melody.length;
+        
+        this.intervalId = setTimeout(scheduleNext, noteData.duration * 1000);
+      };
+      
+      scheduleNext();
+    }
+    
+    stop() {
+      this.isPlaying = false;
+      if (this.intervalId) {
+        clearTimeout(this.intervalId);
+        this.intervalId = null;
+      }
+    }
+    
+    setMusicVolume(value) {
+      if (this.musicGain) {
+        this.musicGain.gain.setValueAtTime(value, this.audioContext.currentTime);
+      }
+    }
+    
+    setSFXVolume(value) {
+      if (this.sfxGain) {
+        this.sfxGain.gain.setValueAtTime(value, this.audioContext.currentTime);
+      }
+    }
+  }
+  
+  const musicPlayer = new MedievalMusicPlayer();
+  
   // Iniciar juego
   window.addEventListener('startGame', (e) => {
     const { mode, theme, aiLevel } = e.detail;
@@ -83,6 +205,10 @@ import AudioControl from '../components/AudioControl.astro';
       playerColor: 'white'
     });
     
+    // Iniciar música medieval
+    musicPlayer.init();
+    musicPlayer.play();
+    
     // Renderizar tablero inicial
     renderBoard();
     
@@ -97,6 +223,20 @@ import AudioControl from '../components/AudioControl.astro';
   window.addEventListener('themeChange', (e) => {
     currentTheme = e.detail.theme;
     document.body.className = `theme-${currentTheme}`;
+  });
+  
+  // Controles de volumen
+  window.addEventListener('musicVolumeChange', (e) => {
+    musicPlayer.setMusicVolume(e.detail.volume);
+    if (e.detail.volume > 0 && !musicPlayer.isPlaying) {
+      musicPlayer.play();
+    } else if (e.detail.volume === 0) {
+      musicPlayer.stop();
+    }
+  });
+  
+  window.addEventListener('sfxVolumeChange', (e) => {
+    musicPlayer.setSFXVolume(e.detail.volume);
   });
   
   // Renderizar tablero
@@ -130,11 +270,24 @@ import AudioControl from '../components/AudioControl.astro';
     // SVG de la pieza
     pieceEl.innerHTML = getPieceSVG(piece.type, piece.color);
     
-    // Tooltip
+    // Tooltip con delay de 2 segundos
     const tooltip = document.createElement('span');
     tooltip.className = 'piece-tooltip';
     tooltip.textContent = getPieceName(piece.type);
     pieceEl.appendChild(tooltip);
+    
+    // Hover delay para tooltip
+    let hoverTimeout;
+    pieceEl.addEventListener('mouseenter', () => {
+      hoverTimeout = setTimeout(() => {
+        tooltip.classList.add('show');
+      }, 2000);
+    });
+    
+    pieceEl.addEventListener('mouseleave', () => {
+      clearTimeout(hoverTimeout);
+      tooltip.classList.remove('show');
+    });
     
     square.appendChild(pieceEl);
   }
@@ -731,26 +884,52 @@ import AudioControl from '../components/AudioControl.astro';
   
   // Configurar listeners del juego
   function setupGameListeners() {
-    // Movimiento de pieza
+    // Movimiento de pieza con animación fluida
     game.on('pieceMove', ({ from, to }) => {
-      // Actualizar DOM
       const fromSquare = document.querySelector(`[data-row="${from.row}"][data-col="${from.col}"]`);
       const toSquare = document.querySelector(`[data-row="${to.row}"][data-col="${to.col}"]`);
       const pieceEl = fromSquare.querySelector('.chess-piece');
       
       if (pieceEl && toSquare) {
-        // Remover pieza del destino (captura)
+        // Remover pieza del destino (captura) con animación
         const capturedPiece = toSquare.querySelector('.chess-piece');
         if (capturedPiece) {
-          capturedPiece.remove();
+          capturedPiece.style.transition = 'all 0.3s ease';
+          capturedPiece.style.transform = 'scale(0) rotate(180deg)';
+          capturedPiece.style.opacity = '0';
+          setTimeout(() => capturedPiece.remove(), 300);
         }
         
-        // Mover pieza
-        toSquare.appendChild(pieceEl);
-        pieceEl.dataset.row = to.row;
-        pieceEl.dataset.col = to.col;
-        pieceEl.classList.add('animate-move');
-        setTimeout(() => pieceEl.classList.remove('animate-move'), 300);
+        // Animación de movimiento fluida
+        pieceEl.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        pieceEl.style.zIndex = '100';
+        
+        // Calcular posición relativa para la animación
+        const fromRect = fromSquare.getBoundingClientRect();
+        const toRect = toSquare.getBoundingClientRect();
+        const deltaX = toRect.left - fromRect.left;
+        const deltaY = toRect.top - fromRect.top;
+        
+        // Aplicar transformación
+        pieceEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.1)`;
+        
+        setTimeout(() => {
+          toSquare.appendChild(pieceEl);
+          pieceEl.style.transition = '';
+          pieceEl.style.transform = '';
+          pieceEl.style.zIndex = '';
+          pieceEl.dataset.row = to.row;
+          pieceEl.dataset.col = to.col;
+          
+          // Efecto de aterrizaje
+          pieceEl.animate([
+            { transform: 'scale(1.1)', filter: 'brightness(1.3)' },
+            { transform: 'scale(1)', filter: 'brightness(1)' }
+          ], {
+            duration: 200,
+            easing: 'ease-out'
+          });
+        }, 400);
       }
       
       // Limpiar selección
@@ -758,8 +937,10 @@ import AudioControl from '../components/AudioControl.astro';
       
       // Actualizar último movimiento
       document.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
-      fromSquare.classList.add('last-move');
-      toSquare.classList.add('last-move');
+      setTimeout(() => {
+        fromSquare.classList.add('last-move');
+        toSquare.classList.add('last-move');
+      }, 400);
     });
     
     // Promoción

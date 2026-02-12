@@ -72,23 +72,24 @@
   }
 }
 
-// Tooltip con nombre de pieza
+// Tooltip con nombre de pieza - aparece después de 2s
 .piece-tooltip {
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(-5px);
   background: $bg-dark;
   color: $text-primary;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
   font-size: 12px;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity $transition-fast;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   z-index: 200;
-  border: 1px solid $accent-gold;
+  border: 2px solid $accent-gold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   
   &::after {
     content: '';
@@ -96,13 +97,14 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 5px solid transparent;
+    border: 6px solid transparent;
     border-top-color: $bg-dark;
   }
-}
-
-.chess-piece:hover .piece-tooltip {
-  opacity: 1;
+  
+  &.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 // Efecto de partículas al mover
