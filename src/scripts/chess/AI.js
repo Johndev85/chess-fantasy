@@ -1,5 +1,11 @@
 // src/scripts/chess/AI.js - Inteligencia Artificial con Minimax
 import { ChessBoard } from './Board.js';
+import { Pawn } from './pieces/Pawn.js';
+import { Knight } from './pieces/Knight.js';
+import { Bishop } from './pieces/Bishop.js';
+import { Rook } from './pieces/Rook.js';
+import { Queen } from './pieces/Queen.js';
+import { King } from './pieces/King.js';
 
 export class ChessAI {
   constructor(level = 2) {
@@ -119,14 +125,43 @@ export class ChessAI {
       for (let col = 0; col < 8; col++) {
         const piece = board.getPiece(row, col);
         if (piece && piece.color === color) {
+          // Crear pieza temporal con posición correcta
+          let tempPiece;
+          const pos = { row, col };
+          
+          switch (piece.type) {
+            case 'pawn':
+              tempPiece = new Pawn(piece.color, pos);
+              break;
+            case 'knight':
+              tempPiece = new Knight(piece.color, pos);
+              break;
+            case 'bishop':
+              tempPiece = new Bishop(piece.color, pos);
+              break;
+            case 'rook':
+              tempPiece = new Rook(piece.color, pos);
+              break;
+            case 'queen':
+              tempPiece = new Queen(piece.color, pos);
+              break;
+            case 'king':
+              tempPiece = new King(piece.color, pos);
+              break;
+            default:
+              continue;
+          }
+          
+          tempPiece.hasMoved = piece.hasMoved;
+          
           let moves;
           if (piece.type === 'king') {
-            moves = piece.getPossibleMoves(board.grid, {
+            moves = tempPiece.getPossibleMoves(board.grid, {
               kingside: board.canCastle(color, 'kingside'),
               queenside: board.canCastle(color, 'queenside')
             });
           } else {
-            moves = piece.getPossibleMoves(board.grid, board.enPassantTarget);
+            moves = tempPiece.getPossibleMoves(board.grid, board.enPassantTarget);
           }
           
           // Filtrar movimientos que dejan al rey en jaque

@@ -110,7 +110,7 @@ import AudioControl from '../components/AudioControl.astro';
         this.masterGain.connect(this.audioContext.destination);
         
         this.musicGain = this.audioContext.createGain();
-        this.musicGain.gain.value = 0.5;
+        this.musicGain.gain.value = 0.1;
         this.musicGain.connect(this.masterGain);
         
         this.sfxGain = this.audioContext.createGain();
@@ -207,6 +207,9 @@ import AudioControl from '../components/AudioControl.astro';
       playerColor: 'white'
     });
     
+    // Hacer game global para debugging
+    window.game = game;
+    
     // Iniciar música medieval solo si está habilitada
     if (musicEnabled) {
       musicPlayer.init();
@@ -271,32 +274,20 @@ import AudioControl from '../components/AudioControl.astro';
     pieceEl.dataset.row = row;
     pieceEl.dataset.col = col;
     
-    // SVG de la pieza
-    pieceEl.innerHTML = getPieceSVG(piece.type, piece.color);
+    // SVG de la pieza - insertar como HTML
+    const svgString = getPieceSVG(piece.type, piece.color);
+    pieceEl.innerHTML = svgString;
     
-    // Tooltip oculto por defecto, solo aparece después de 2s de hover
-    const tooltip = document.createElement('span');
-    tooltip.className = 'piece-tooltip';
-    tooltip.textContent = getPieceName(piece.type);
-    tooltip.style.opacity = '0';
-    tooltip.style.visibility = 'hidden';
-    tooltip.style.transition = 'opacity 0.3s ease';
-    pieceEl.appendChild(tooltip);
+    // Asegurar que el SVG tenga las dimensiones correctas
+    const svg = pieceEl.querySelector('svg');
+    if (svg) {
+      svg.style.width = '100%';
+      svg.style.height = '100%';
+      svg.style.display = 'block';
+    }
     
-    // Hover delay para tooltip (2 segundos)
-    let hoverTimeout;
-    pieceEl.addEventListener('mouseenter', () => {
-      hoverTimeout = setTimeout(() => {
-        tooltip.style.opacity = '1';
-        tooltip.style.visibility = 'visible';
-      }, 2000);
-    });
-    
-    pieceEl.addEventListener('mouseleave', () => {
-      clearTimeout(hoverTimeout);
-      tooltip.style.opacity = '0';
-      tooltip.style.visibility = 'hidden';
-    });
+    // Usar title nativo del navegador para popup
+    pieceEl.title = getPieceName(piece.type);
     
     square.appendChild(pieceEl);
   }
@@ -830,6 +821,10 @@ import AudioControl from '../components/AudioControl.astro';
     return names[type] || type;
   }
   
+  // Hacer funciones disponibles globalmente para GameUI
+  window.getPieceSVG = getPieceSVG;
+  window.getPieceName = getPieceName;
+  
   // Configurar eventos del tablero
   function setupBoardEvents() {
     const squares = document.querySelectorAll('.square');
@@ -943,8 +938,21 @@ import AudioControl from '../components/AudioControl.astro';
         }, 400);
       }
       
-      // Limpiar selección
+      // Limpiar selección 
       clearSelection();
+      
+      // Limpiar efectos de jaque del turno anterior
+      document.querySelectorAll('.square.check').forEach(sq => {
+        sq.classList.remove('check');
+        const piece = sq.querySelector('.chess-piece');
+        if (piece) piece.style.animation = '';
+      });
+      const boardEl = document.getElementById('chess-board');
+      if (boardEl) {
+        boardEl.classList.remove('board-in-check');
+        boardEl.style.animation = '';
+        boardEl.style.boxShadow = '';
+      }
       
       // Actualizar último movimiento
       document.querySelectorAll('.square').forEach(sq => sq.classList.remove('last-move'));
@@ -955,28 +963,81 @@ import AudioControl from '../components/AudioControl.astro';
     });
     
     // Promoción
-    game.on('pieceMove', ({ piece }) => {
+    game.on('pieceMove', ({ piece, to }) => {
       if (piece.type === 'pawn') {
-        const row = piece.color === 'white' ? 0 : 7;
-        const square = document.querySelector(`.chess-piece[data-row="${row}"]`);
-        if (square) {
-          const pieceEl = square.closest('.chess-piece');
-          const type = pieceEl?.dataset.type;
-          const color = pieceEl?.dataset.color;
-          if (type && color && type !== 'pawn') {
-            pieceEl.innerHTML = getPieceSVG(type, color);
-            pieceEl.innerHTML += '<span class="piece-tooltip">' + getPieceName(type) + '</span>';
+        const targetRow = piece.color === 'white' ? 0 : 7;
+        // Buscar específicamente la pieza en la posición de destino del movimiento
+        const pieceEl = document.querySelector(`.chess-piece[data-row="${to.row}"][data-col="${to.col}"]`);
+        if (pieceEl) {
+          const currentType = pieceEl.dataset.type;
+          const color = pieceEl.dataset.color;
+          // Verificar si el tipo ha cambiado (promoción)
+          if (currentType && color && currentType !== 'pawn') {
+            pieceEl.innerHTML = getPieceSVG(currentType, color);
+            pieceEl.title = getPieceName(currentType);
           }
         }
       }
     });
     
-    // Jaque
+    // Jaque - EFECTO DRAMÁTICO
     game.on('check', ({ color }) => {
+      console.log(`=== UI CHECK HANDLER called for ${color} ===`);
+      // PRIMERO: Limpiar todos los efectos de jaque anteriores
+      document.querySelectorAll('.square.check').forEach(sq => {
+        sq.classList.remove('check');
+        const piece = sq.querySelector('.chess-piece');
+        if (piece) piece.style.animation = '';
+      });
+      const boardEl = document.getElementById('chess-board');
+      if (boardEl) {
+        boardEl.classList.remove('board-in-check');
+        boardEl.style.animation = '';
+        boardEl.style.boxShadow = '';
+      }
+      
+      // LUEGO: Agregar efectos de jaque actuales
       const kingPos = game.board.getKingPosition(color);
       const kingSquare = document.querySelector(`[data-row="${kingPos.row}"][data-col="${kingPos.col}"]`);
+      
       if (kingSquare) {
+        console.log(`>>> AGREGANDO EFECTO DE JAQUE para ${color} en ${kingPos.row},${kingPos.col} <<<`);
         kingSquare.classList.add('check');
+        
+        // Efecto dramático en el tablero completo
+        if (boardEl) {
+          boardEl.classList.add('board-in-check');
+          boardEl.style.animation = 'board-check-alert 1s infinite';
+          boardEl.style.boxShadow = '0 0 50px 15px rgba(255, 0, 0, 0.5)';
+        }
+        
+        // Shake effect en la pieza del rey
+        const kingPiece = kingSquare.querySelector('.chess-piece');
+        if (kingPiece) {
+          kingPiece.style.animation = 'king-infernal 0.5s infinite, shake 0.5s infinite';
+        }
+        
+        // Mostrar mensaje de alerta
+        setTimeout(() => {
+          const turnText = document.getElementById('turn-text');
+          if (turnText && !game.gameOver) {
+            const originalText = turnText.textContent;
+            turnText.textContent = `⚠️ ¡JAQUE! ⚠️`;
+            turnText.style.color = '#FF0000';
+            turnText.style.textShadow = '0 0 10px #FF0000';
+            turnText.style.animation = 'pulse 0.5s infinite';
+            
+            // Restaurar después de 2 segundos
+            setTimeout(() => {
+              if (!game.gameOver) {
+                turnText.textContent = originalText;
+                turnText.style.color = '';
+                turnText.style.textShadow = '';
+                turnText.style.animation = '';
+              }
+            }, 2000);
+          }
+        }, 100);
       }
     });
     

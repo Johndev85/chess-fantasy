@@ -22,7 +22,9 @@ export class Piece {
   // Clonar la pieza
   clone() {
     const PieceClass = this.constructor;
-    const cloned = new PieceClass(this.color, this.position);
+    // Crear copia profunda de la posición para evitar compartir referencias
+    const clonedPosition = { row: this.position.row, col: this.position.col };
+    const cloned = new PieceClass(this.color, clonedPosition);
     cloned.hasMoved = this.hasMoved;
     return cloned;
   }

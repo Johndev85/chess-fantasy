@@ -55,7 +55,8 @@ export class ChessBoard {
   setPiece(row, col, piece) {
     this.grid[row][col] = piece;
     if (piece) {
-      piece.position = { row, col };
+      // Crear nueva referencia de posición para evitar compartir objetos
+      piece.position = { row: row, col: col };
     }
   }
   
@@ -64,20 +65,37 @@ export class ChessBoard {
     if (!piece) return null;
     
     const captured = this.getPiece(toRow, toCol);
+    
+    // Crear copia profunda para el historial (con datos simples, no referencias)
     const move = {
-      piece: piece.clone(),
+      piece: {
+        type: piece.type,
+        color: piece.color,
+        hasMoved: piece.hasMoved,
+        position: { row: fromRow, col: fromCol }
+      },
       from: { row: fromRow, col: fromCol },
       to: { row: toRow, col: toCol },
-      captured: captured?.clone() || null,
+      captured: captured ? {
+        type: captured.type,
+        color: captured.color,
+        hasMoved: captured.hasMoved,
+        position: { row: toRow, col: toCol }
+      } : null,
       enPassant: false,
       castling: null,
       promotion: null,
       halfMoveClock: this.halfMoveClock
     };
     
-    // Capturar pieza
+    // Capturar pieza (guardar como objeto simple)
     if (captured) {
-      this.capturedPieces[piece.color].push(captured);
+      this.capturedPieces[piece.color].push({
+        type: captured.type,
+        color: captured.color,
+        hasMoved: captured.hasMoved,
+        position: { row: toRow, col: toCol }
+      });
       this.halfMoveClock = 0;
     } else if (piece.type === 'pawn') {
       this.halfMoveClock = 0;
@@ -96,7 +114,12 @@ export class ChessBoard {
         const capturedPawnRow = piece.color === 'white' ? toRow + 1 : toRow - 1;
         const capturedPawn = this.getPiece(capturedPawnRow, toCol);
         if (capturedPawn) {
-          this.capturedPieces[piece.color].push(capturedPawn);
+          this.capturedPieces[piece.color].push({
+            type: capturedPawn.type,
+            color: capturedPawn.color,
+            hasMoved: capturedPawn.hasMoved,
+            position: { row: capturedPawnRow, col: toCol }
+          });
           this.setPiece(capturedPawnRow, toCol, null);
           move.enPassant = true;
           move.enPassantCapture = { row: capturedPawnRow, col: toCol };
@@ -153,25 +176,64 @@ export class ChessBoard {
     
     const move = this.moveHistory.pop();
     
-    // Restaurar pieza movida
-    this.setPiece(move.from.row, move.from.col, move.piece);
-    move.piece.hasMoved = move.piece.hasMoved && 
-      !(move.piece.type === 'pawn' && move.from.row === (move.piece.color === 'white' ? 6 : 1)) &&
-      !(move.piece.type === 'king' && move.from.col === 4) &&
-      !(move.piece.type === 'rook' && (move.from.col === 0 || move.from.col === 7));
+    // Reconstruir pieza movida desde datos simples
+    let restoredPiece;
+    const pieceData = move.piece;
+    const pos = { row: move.from.row, col: move.from.col };
     
-    // Restaurar pieza capturada
-    this.setPiece(move.to.row, move.to.col, move.captured);
+    switch (pieceData.type) {
+      case 'pawn': restoredPiece = new Pawn(pieceData.color, pos); break;
+      case 'knight': restoredPiece = new Knight(pieceData.color, pos); break;
+      case 'bishop': restoredPiece = new Bishop(pieceData.color, pos); break;
+      case 'rook': restoredPiece = new Rook(pieceData.color, pos); break;
+      case 'queen': restoredPiece = new Queen(pieceData.color, pos); break;
+      case 'king': restoredPiece = new King(pieceData.color, pos); break;
+      default: return null;
+    }
+    
+    restoredPiece.hasMoved = pieceData.hasMoved && 
+      !(pieceData.type === 'pawn' && move.from.row === (pieceData.color === 'white' ? 6 : 1)) &&
+      !(pieceData.type === 'king' && move.from.col === 4) &&
+      !(pieceData.type === 'rook' && (move.from.col === 0 || move.from.col === 7));
+    
+    // Restaurar pieza movida
+    this.setPiece(move.from.row, move.from.col, restoredPiece);
+    
+    // Restaurar pieza capturada (reconstruir desde datos simples)
     if (move.captured) {
-      const capturedList = this.capturedPieces[move.piece.color];
-      const index = capturedList.findIndex(p => p.id === move.captured.id);
-      if (index > -1) capturedList.splice(index, 1);
+      const capturedData = move.captured;
+      let restoredCaptured;
+      const capturedPos = { row: move.to.row, col: move.to.col };
+      
+      switch (capturedData.type) {
+        case 'pawn': restoredCaptured = new Pawn(capturedData.color, capturedPos); break;
+        case 'knight': restoredCaptured = new Knight(capturedData.color, capturedPos); break;
+        case 'bishop': restoredCaptured = new Bishop(capturedData.color, capturedPos); break;
+        case 'rook': restoredCaptured = new Rook(capturedData.color, capturedPos); break;
+        case 'queen': restoredCaptured = new Queen(capturedData.color, capturedPos); break;
+        case 'king': restoredCaptured = new King(capturedData.color, capturedPos); break;
+        default: restoredCaptured = null;
+      }
+      
+      if (restoredCaptured) {
+        restoredCaptured.hasMoved = capturedData.hasMoved;
+        this.setPiece(move.to.row, move.to.col, restoredCaptured);
+        const capturedList = this.capturedPieces[restoredPiece.color];
+        // Buscar y remover de capturadas por tipo y color
+        const index = capturedList.findIndex(p => 
+          p.type === capturedData.type && 
+          p.color === capturedData.color
+        );
+        if (index > -1) capturedList.splice(index, 1);
+      }
+    } else {
+      this.setPiece(move.to.row, move.to.col, null);
     }
     
     // Restaurar captura al paso
     if (move.enPassant) {
       const pawn = new Pawn(
-        move.piece.color === 'white' ? 'black' : 'white',
+        restoredPiece.color === 'white' ? 'black' : 'white',
         move.enPassantCapture
       );
       this.setPiece(move.enPassantCapture.row, move.enPassantCapture.col, pawn);
@@ -184,9 +246,9 @@ export class ChessBoard {
       const rookToCol = isKingside ? 7 : 0;
       const rook = this.getPiece(move.from.row, rookFromCol);
       if (rook) {
-        this.setPiece(move.from.row, rookToCol, rook);
+        const restoredRook = new Rook(rook.color, { row: move.from.row, col: rookToCol });
+        this.setPiece(move.from.row, rookToCol, restoredRook);
         this.setPiece(move.from.row, rookFromCol, null);
-        rook.hasMoved = false;
       }
     }
     
@@ -212,15 +274,45 @@ export class ChessBoard {
       for (let c = 0; c < 8; c++) {
         const piece = this.getPiece(r, c);
         if (piece && piece.color === byColor) {
+          // Crear pieza temporal según su tipo
+          let tempPiece;
+          const pos = { row: r, col: c };
+          
+          switch (piece.type) {
+            case 'pawn':
+              tempPiece = new Pawn(piece.color, pos);
+              break;
+            case 'knight':
+              tempPiece = new Knight(piece.color, pos);
+              break;
+            case 'bishop':
+              tempPiece = new Bishop(piece.color, pos);
+              break;
+            case 'rook':
+              tempPiece = new Rook(piece.color, pos);
+              break;
+            case 'queen':
+              tempPiece = new Queen(piece.color, pos);
+              break;
+            case 'king':
+              tempPiece = new King(piece.color, pos);
+              break;
+            default:
+              continue;
+          }
+          
+          tempPiece.hasMoved = piece.hasMoved;
+          
           let moves;
           if (piece.type === 'king') {
-            moves = piece.getPossibleMoves(this.grid, {
+            moves = tempPiece.getPossibleMoves(this.grid, {
               kingside: false,
               queenside: false
             });
           } else {
-            moves = piece.getPossibleMoves(this.grid, this.enPassantTarget);
+            moves = tempPiece.getPossibleMoves(this.grid, this.enPassantTarget);
           }
+          
           if (moves.some(m => m.row === row && m.col === col)) {
             return true;
           }
@@ -232,8 +324,12 @@ export class ChessBoard {
   
   isInCheck(color) {
     const kingPos = this.getKingPosition(color);
+    console.log(`isInCheck: Rey ${color} está en posición:`, kingPos);
     if (!kingPos) return false;
-    return this.isSquareAttacked(kingPos.row, kingPos.col, color === 'white' ? 'black' : 'white');
+    const enemyColor = color === 'white' ? 'black' : 'white';
+    const attacked = this.isSquareAttacked(kingPos.row, kingPos.col, enemyColor);
+    console.log(`isSquareAttacked(${kingPos.row},${kingPos.col}, ${enemyColor}) = ${attacked}`);
+    return attacked;
   }
   
   canCastle(color, side) {
@@ -263,17 +359,58 @@ export class ChessBoard {
   }
   
   clone() {
-    const newBoard = new ChessBoard();
-    newBoard.grid = Array(8).fill(null).map((_, row) => 
-      Array(8).fill(null).map((_, col) => {
+    // Crear tablero vacío sin llamar al constructor
+    const newBoard = Object.create(ChessBoard.prototype);
+    newBoard.grid = Array(8).fill(null).map(() => Array(8).fill(null));
+    newBoard.moveHistory = [];
+    newBoard.capturedPieces = { white: [], black: [] };
+    newBoard.enPassantTarget = null;
+    newBoard.halfMoveClock = 0;
+    newBoard.fullMoveNumber = 1;
+    
+    // Copiar piezas clonadas - USAR setPiece para actualizar posiciones
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
         const piece = this.getPiece(row, col);
-        return piece ? piece.clone() : null;
-      })
-    );
-    newBoard.moveHistory = this.moveHistory.map(m => ({ ...m }));
+        if (piece) {
+          const clonedPiece = piece.clone();
+          newBoard.setPiece(row, col, clonedPiece);
+        }
+      }
+    }
+    
+    // Copiar historial (ahora son objetos simples, no necesitan clone)
+    newBoard.moveHistory = this.moveHistory.map(m => ({ 
+      ...m,
+      piece: m.piece ? { ...m.piece } : null,
+      captured: m.captured ? { ...m.captured } : null
+    }));
+    // Reconstruir piezas capturadas desde datos simples
     newBoard.capturedPieces = {
-      white: [...this.capturedPieces.white],
-      black: [...this.capturedPieces.black]
+      white: this.capturedPieces.white.map(p => {
+        const pos = { ...p.position };
+        switch(p.type) {
+          case 'pawn': return new Pawn(p.color, pos);
+          case 'knight': return new Knight(p.color, pos);
+          case 'bishop': return new Bishop(p.color, pos);
+          case 'rook': return new Rook(p.color, pos);
+          case 'queen': return new Queen(p.color, pos);
+          case 'king': return new King(p.color, pos);
+          default: return null;
+        }
+      }).filter(Boolean),
+      black: this.capturedPieces.black.map(p => {
+        const pos = { ...p.position };
+        switch(p.type) {
+          case 'pawn': return new Pawn(p.color, pos);
+          case 'knight': return new Knight(p.color, pos);
+          case 'bishop': return new Bishop(p.color, pos);
+          case 'rook': return new Rook(p.color, pos);
+          case 'queen': return new Queen(p.color, pos);
+          case 'king': return new King(p.color, pos);
+          default: return null;
+        }
+      }).filter(Boolean)
     };
     newBoard.enPassantTarget = this.enPassantTarget ? { ...this.enPassantTarget } : null;
     newBoard.halfMoveClock = this.halfMoveClock;

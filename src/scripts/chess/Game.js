@@ -1,6 +1,12 @@
 // src/scripts/chess/Game.js - Controlador principal del juego
 import { ChessBoard } from './Board.js';
 import { ChessAI } from './AI.js';
+import { Pawn } from './pieces/Pawn.js';
+import { Knight } from './pieces/Knight.js';
+import { Bishop } from './pieces/Bishop.js';
+import { Rook } from './pieces/Rook.js';
+import { Queen } from './pieces/Queen.js';
+import { King } from './pieces/King.js';
 
 export class ChessGame {
   constructor(options = {}) {
@@ -76,22 +82,58 @@ export class ChessGame {
   }
   
   getValidMovesForPiece(piece) {
+    // Crear pieza temporal con posición correcta desde el tablero
+    let tempPiece;
+    const pos = { ...piece.position };
+    
+    switch (piece.type) {
+      case 'pawn':
+        tempPiece = new Pawn(piece.color, pos);
+        break;
+      case 'knight':
+        tempPiece = new Knight(piece.color, pos);
+        break;
+      case 'bishop':
+        tempPiece = new Bishop(piece.color, pos);
+        break;
+      case 'rook':
+        tempPiece = new Rook(piece.color, pos);
+        break;
+      case 'queen':
+        tempPiece = new Queen(piece.color, pos);
+        break;
+      case 'king':
+        tempPiece = new King(piece.color, pos);
+        break;
+      default:
+        return [];
+    }
+    tempPiece.hasMoved = piece.hasMoved;
+    
     let moves;
     if (piece.type === 'king') {
-      moves = piece.getPossibleMoves(this.board.grid, {
+      moves = tempPiece.getPossibleMoves(this.board.grid, {
         kingside: this.board.canCastle(piece.color, 'kingside'),
         queenside: this.board.canCastle(piece.color, 'queenside')
       });
     } else {
-      moves = piece.getPossibleMoves(this.board.grid, this.board.enPassantTarget);
+      moves = tempPiece.getPossibleMoves(this.board.grid, this.board.enPassantTarget);
     }
     
     // Filtrar movimientos que dejan al rey en jaque
-    return moves.filter(move => {
+    console.log(`Calculando movimientos para ${piece.color} ${piece.type} en [${piece.position.row},${piece.position.col}]`);
+    console.log(`Movimientos posibles:`, moves);
+    
+    const validMoves = moves.filter(move => {
       const boardCopy = this.board.clone();
       boardCopy.movePiece(piece.position.row, piece.position.col, move.row, move.col);
-      return !boardCopy.isInCheck(piece.color);
+      const inCheck = boardCopy.isInCheck(piece.color);
+      console.log(`  Movimiento a [${move.row},${move.col}]: ${inCheck ? 'EN JAQUE' : 'válido'}`);
+      return !inCheck;
     });
+    
+    console.log(`Movimientos válidos filtrados:`, validMoves.length);
+    return validMoves;
   }
   
   async makeMove(from, to, promotionPiece = null) {
@@ -133,7 +175,11 @@ export class ChessGame {
     
     if (move.captured) {
       this.emit('pieceCapture', { 
-        piece: move.captured, 
+        piece: {
+          type: move.captured.type,
+          color: move.captured.color,
+          value: move.captured.value
+        }, 
         color: piece.color,
         notation: this.getPieceSymbol(move.captured.type)
       });
@@ -177,7 +223,10 @@ export class ChessGame {
   }
   
   checkGameState() {
+    const movedColor = this.currentTurn;
     const opponentColor = this.currentTurn === 'white' ? 'black' : 'white';
+    console.log(`checkGameState: moved=${movedColor}, checking opponent=${opponentColor}`);
+    
     const ai = new ChessAI(1);
     const validMoves = ai.getAllValidMoves(this.board, opponentColor);
     
@@ -185,7 +234,7 @@ export class ChessGame {
       this.gameOver = true;
       
       if (this.board.isInCheck(opponentColor)) {
-        // Jaque mate
+        // Jaque mate - el oponente (currentTurn) dio jaque mate
         this.winner = this.currentTurn;
         this.emit('gameWin', { winner: this.winner, color: this.currentTurn });
       } else {
@@ -195,8 +244,11 @@ export class ChessGame {
       return;
     }
     
-    // Verificar jaque
-    if (this.board.isInCheck(opponentColor)) {
+    // Verificar jaque del OPONENTE (el que NO movió)
+    const isInCheck = this.board.isInCheck(opponentColor);
+    console.log(`isInCheck(${opponentColor}) = ${isInCheck}, emitting=${isInCheck}`);
+    if (isInCheck) {
+      console.log(`>>> EMITTING CHECK for ${opponentColor} <<<`);
       this.emit('check', { color: opponentColor });
     }
     
@@ -211,6 +263,8 @@ export class ChessGame {
       this.gameOver = true;
       this.emit('gameDraw', { reason: 'insufficient material' });
     }
+    
+    console.log(`=== checkGameState END ===`);
   }
   
   isInsufficientMaterial() {

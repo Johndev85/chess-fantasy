@@ -10,6 +10,12 @@
     <div class="turn-piece black" id="turn-black"></div>
   </div>
 
+  <!-- Pieza Seleccionada -->
+  <div class="selected-piece-info" id="selected-piece-info" style="display: none;">
+    <span class="piece-label">Seleccionado:</span>
+    <span class="piece-name" id="selected-piece-name"></span>
+  </div>
+
   <!-- Estado de IA Pensando -->
   <div class="ai-thinking-container" id="ai-thinking-container" style="display: none;">
     <div class="ai-thinking">
@@ -27,8 +33,8 @@
   <div class="volume-controls">
     <div class="volume-item">
       <span class="volume-icon">🎵</span>
-      <input type="range" class="volume-slider" id="music-volume" min="0" max="100" value="50">
-      <span class="volume-value" id="music-volume-value">50%</span>
+      <input type="range" class="volume-slider" id="music-volume" min="0" max="100" value="10">
+      <span class="volume-value" id="music-volume-value">10%</span>
     </div>
     <div class="volume-item">
       <span class="volume-icon">🔊</span>
@@ -105,6 +111,28 @@
   const lastMoves = document.getElementById('last-moves');
   const moveHistory = document.getElementById('move-history');
   const resignModal = document.getElementById('resign-modal');
+  const selectedPieceInfo = document.getElementById('selected-piece-info');
+  const selectedPieceName = document.getElementById('selected-piece-name');
+
+  // Mostrar nombre de pieza seleccionada
+  window.addEventListener('pieceSelected', (e) => {
+    const pieceName = e.detail.piece?.type;
+    if (pieceName && selectedPieceInfo && selectedPieceName) {
+      const names = {
+        pawn: 'Peón', knight: 'Caballo', bishop: 'Alfil',
+        rook: 'Torre', queen: 'Reina', king: 'Rey'
+      };
+      selectedPieceName.textContent = names[pieceName] || pieceName;
+      selectedPieceInfo.style.display = 'flex';
+    }
+  });
+
+  // Ocultar nombre de pieza cuando se deselecciona
+  window.addEventListener('pieceDeselected', () => {
+    if (selectedPieceInfo) {
+      selectedPieceInfo.style.display = 'none';
+    }
+  });
 
   // Actualizar indicador de turno
   window.addEventListener('turnChange', (e) => {
@@ -174,17 +202,60 @@
     }
   }
 
+  // Función para obtener nombre de pieza
+  function getPieceDisplayName(type) {
+    const names = {
+      pawn: 'Peón', knight: 'Caballo', bishop: 'Alfil',
+      rook: 'Torre', queen: 'Reina', king: 'Rey'
+    };
+    return names[type] || type;
+  }
+
+  // Función para crear SVG simple de pieza
+  function createPieceIcon(type, color) {
+    const isWhite = color === 'white';
+    const bgColor = isWhite ? '#F5F5DC' : '#2F2F2F';
+    const textColor = isWhite ? '#000' : '#FFF';
+    const symbols = {
+      pawn: '♙', knight: '♘', bishop: '♗', rook: '♖', queen: '♕', king: '♔'
+    };
+    const symbol = symbols[type] || '?';
+    
+    return `<svg viewBox="0 0 32 32" style="width:100%;height:100%;">
+      <rect x="4" y="4" width="24" height="24" rx="4" fill="${bgColor}" stroke="#000" stroke-width="1"/>
+      <text x="16" y="22" text-anchor="middle" font-size="16" fill="${textColor}" font-weight="bold">${symbol}</text>
+    </svg>`;
+  }
+
   // Agregar pieza capturada
-  window.addEventListener('pieceCaptured', (e) => {
+  window.addEventListener('pieceCapture', (e) => {
     const { piece, color, notation } = e.detail;
-    const container = document.getElementById(`captured-${color}`);
-    if (container) {
-      const pieceEl = document.createElement('div');
-      pieceEl.className = 'captured-piece';
-      pieceEl.innerHTML = piece;
-      pieceEl.title = notation || '';
-      container.appendChild(pieceEl);
+    
+    if (!piece || !piece.type || !piece.color) {
+      console.error('Invalid piece data in pieceCapture event:', piece);
+      return;
     }
+    
+    const container = document.getElementById(`captured-${piece.color}`);
+    if (!container) {
+      console.error('Container not found for color:', piece.color);
+      return;
+    }
+    
+    const pieceEl = document.createElement('div');
+    pieceEl.className = 'captured-piece';
+    pieceEl.dataset.type = piece.type;
+    pieceEl.dataset.color = piece.color;
+    
+    // Usar función global si está disponible, sino usar función local
+    if (window.getPieceSVG) {
+      pieceEl.innerHTML = window.getPieceSVG(piece.type, piece.color);
+    } else {
+      pieceEl.innerHTML = createPieceIcon(piece.type, piece.color);
+    }
+    
+    pieceEl.title = `${window.getPieceName ? window.getPieceName(piece.type) : getPieceDisplayName(piece.type)} capturada`;
+    container.appendChild(pieceEl);
   });
 
   // Limpiar historial al iniciar nuevo juego
@@ -316,6 +387,32 @@
       letter-spacing: 1px;
       font-size: 0.9rem;
       color: $accent-gold;
+    }
+  }
+
+  // Info de pieza seleccionada
+  .selected-piece-info {
+    background: rgba($accent-gold, 0.1);
+    border: 2px solid rgba($accent-gold, 0.3);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    animation: fade-in 0.3s ease;
+
+    .piece-label {
+      color: $text-secondary;
+      font-size: 0.8rem;
+    }
+
+    .piece-name {
+      color: $accent-gold;
+      font-weight: bold;
+      font-size: 0.9rem;
+      text-transform: capitalize;
     }
   }
 
